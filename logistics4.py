@@ -5,7 +5,7 @@ from z3 import *
 import time
 
 s = Solver()
-s.set(unsat_core=True)
+#s.set(unsat_core=True)
 
 t0 = time.time()
 
@@ -14,6 +14,7 @@ Dir.declare('u')
 Dir.declare('d')
 Dir.declare('l')
 Dir.declare('r')
+Dir.declare('nodir')
 Dir = Dir.create()
 
 SZ = 7
@@ -39,31 +40,20 @@ def print_belt(m):
         for j in range(SZ):
             c = cells[i][j]
             res = m.eval(belt_field(c))
-            if eq(MaybeDir.nothing, res):
+            if eq(Dir.nodir, res):
                 ch='.'
-            elif eq(MaybeDir.just(Dir.r), res):
+            elif eq(Dir.r, res):
                 ch='>'
-            elif eq(MaybeDir.just(Dir.l), res):
+            elif eq(Dir.l, res):
                 ch = '<'
-            elif eq(MaybeDir.just(Dir.u), res):
+            elif eq(Dir.u, res):
                 ch = '^'
-            elif eq(MaybeDir.just(Dir.d), res):
+            elif eq(Dir.d, res):
                 ch = 'v'
             else:
-                raise Exception('strange dir')
+                raise ValueError('strange dir', res)
             print(ch,end='')
         print()
-
-def declare_maybe(typ):
-    assert is_sort(typ)
-    maybe = Datatype('Maybe' + typ.name())
-    maybe.declare('just', ('getJust', typ))
-    maybe.declare('nothing')
-    return maybe.create()
-
-
-MaybeCell = declare_maybe(Cell)
-MaybeDir = declare_maybe(Dir)
 
 
 def pymoves(i,j):
@@ -94,21 +84,21 @@ def inv_dir(d):
         assert ValueError('Strange dir', d)
 
 
-belt_field = Function('belt_field', Cell, MaybeDir)
+belt_field = Function('belt_field', Cell, Dir)
 connected = Function('connected', Cell, Cell, BoolSort())
 
-maybe_to_int = Function('maybe_to_int', MaybeDir, IntSort())
-s.add(maybe_to_int(MaybeDir.nothing) == 0)
-s.add(maybe_to_int(MaybeDir.just(Dir.u)) == 1)
-s.add(maybe_to_int(MaybeDir.just(Dir.d)) == 1)
-s.add(maybe_to_int(MaybeDir.just(Dir.l)) == 1)
-s.add(maybe_to_int(MaybeDir.just(Dir.r)) == 1)
+belt_cost = Function('belt_cost', Dir, IntSort())
+s.add(belt_cost(Dir.nodir) == 0)
+s.add(belt_cost(Dir.u) == 1)
+s.add(belt_cost(Dir.d) == 1)
+s.add(belt_cost(Dir.l) == 1)
+s.add(belt_cost(Dir.r) == 1)
 
 belt_count = Int('belt_count')
 
 sum = 0
 for c in all_cells():
-    sum = sum + maybe_to_int(belt_field(c))
+    sum = sum + belt_cost(belt_field(c))
 
 s.add(belt_count == sum)
 
@@ -126,7 +116,7 @@ for c1 in all_cells():
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
     for c2, d in pymoves(i, j):
-        s.add(Implies(belt_field(c1) == MaybeDir.just(d), connected(c1, c2)))
+        s.add(Implies(belt_field(c1) == d, connected(c1, c2)))
 
 
 # connection by means of a belt
@@ -134,14 +124,14 @@ for i, j, c1 in all_coord_cells():
     for c3 in all_cells():
         if not eq(c1,c3):
             s.add(Implies(connected(c1,c3),
-                          Or([And(belt_field(c1) == MaybeDir.just(d),
+                          Or([And(belt_field(c1) == d,
                                   connected(c2, c3))
                                                 for c2, d in pymoves(i, j)])))
 
 for c1 in all_cells():
     for i, j, c2 in all_coord_cells():
         for c3, d in pymoves(i, j):
-            s.add(Implies(And(belt_field(c2) == MaybeDir.just(d), connected(c1,c2)),
+            s.add(Implies(And(belt_field(c2) == d, connected(c1,c2)),
                       (connected(c1,c3))))
 
 #
@@ -160,11 +150,14 @@ for c1 in all_cells():
 #s.add(belt_field(cells[0][0]) == MaybeDir.just(Dir.r))
 
 c1 = cells[0][0]
-c2 = cells[SZ-1][SZ-1]
-c3 = cells[1][1]
+c2 = cells[SZ-1][0]
+c3 = cells[0][SZ-1]
+c4 = cells[SZ-1][SZ-1]
 
-s.add(connected(c1,c2))
-#s.add(connected(c3,c2))
+s.add(connected(c1,c4))
+s.add(connected(c2,c4))
+s.add(connected(c3,c4))
+
 #s.assert_and_track(belt_field(c2) == MaybeDir.nothing, 'no_back')
 
 s.push()
