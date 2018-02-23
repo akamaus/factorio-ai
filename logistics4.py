@@ -123,7 +123,7 @@ for c1 in all_cells():
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
     for c2, d in pymoves(i, j):
-        s.add(Implies(belt_field(c1) == MaybeDir.just(d), connected(c1,c2)))
+        s.add(Implies(belt_field(c1) == MaybeDir.just(d), connected(c1, c2)))
 
 
 # connection by means of a belt
@@ -135,15 +135,12 @@ for i, j, c1 in all_coord_cells():
                                   connected(c2, c3))
                                                 for c2, d in pymoves(i, j)])))
 
-# # forward induction
-# for i,j, c1 in all_coord_cells():
-#     for c2 in all_cells():
-#         if not eq(c1,c2):
-#             mvs = pymoves(i,j)
-#             vars = [ And(connected(c2,c3),
-#                          belt_field(c1) == MaybeDir.just(d)) for c3,d in mvs ]
-#             s.add(Implies(connected(c1,c2), Or(*vars)))
-#
+for c1 in all_cells():
+    for i, j, c2 in all_coord_cells():
+        for c3, d in pymoves(i, j):
+            s.add(Implies(And(belt_field(c2) == MaybeDir.just(d), connected(c1,c2)),
+                      (connected(c1,c3))))
+
 #
 # # backward induction
 # for c1 in all_cells():
