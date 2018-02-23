@@ -16,7 +16,7 @@ Dir.declare('l')
 Dir.declare('r')
 Dir = Dir.create()
 
-SZ = 5
+SZ = 7
 
 Cell = DeclareSort('Cell')
 cells = [[Const('cell_%s_%s' % (j,i), Cell) for i in range(SZ)] for j in range(SZ)]
@@ -65,8 +65,6 @@ def declare_maybe(typ):
 MaybeCell = declare_maybe(Cell)
 MaybeDir = declare_maybe(Dir)
 
-move = Function('move', Dir, Cell, MaybeCell)
-
 
 def pymoves(i,j):
     """ Returns move variants as [(cell, dir)] """
@@ -99,6 +97,21 @@ def inv_dir(d):
 belt_field = Function('belt_field', Cell, MaybeDir)
 connected = Function('connected', Cell, Cell, BoolSort())
 
+maybe_to_int = Function('maybe_to_int', MaybeDir, IntSort())
+s.add(maybe_to_int(MaybeDir.nothing) == 0)
+s.add(maybe_to_int(MaybeDir.just(Dir.u)) == 1)
+s.add(maybe_to_int(MaybeDir.just(Dir.d)) == 1)
+s.add(maybe_to_int(MaybeDir.just(Dir.l)) == 1)
+s.add(maybe_to_int(MaybeDir.just(Dir.r)) == 1)
+
+belt_count = Int('belt_count')
+
+sum = 0
+for c in all_cells():
+    sum = sum + maybe_to_int(belt_field(c))
+
+s.add(belt_count == sum)
+
 # Reflexivity
 for c in all_cells():
     s.add(connected(c, c))
@@ -109,16 +122,6 @@ for c1 in all_cells():
         if not eq(c1,c2):
             s.add(Implies(connected(c1, c2), Not(connected(c2, c1))))
 
-# no belt => no connectivity
-# for c1 in all_cells():
-#     for c2 in all_cells():
-#         if not eq(c1,c2):
-#             s.add(Implies(belt_field(c1) == MaybeDir.nothing,
-#                           Not(connected(c1, c2))))
-
-# s.add(ForAll([c1, c2, c3], Implies(And(connected(c1, c2),  # Transitivity
-#                                        connected(c2, c3)),
-#                                    connected(c1, c3))))
 
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
@@ -164,18 +167,29 @@ s.add(connected(c1,c2))
 #s.add(connected(c3,c2))
 #s.assert_and_track(belt_field(c2) == MaybeDir.nothing, 'no_back')
 
-t1 = time.time()
-check_res = s.check()
-t2 = time.time()
+s.push()
 
+print('Modelling time:', time.time() - t0)
+while True:
+    t1 = time.time()
+    check_res = s.check()
+    t2 = time.time()
 
-if str(check_res) == 'sat':
-    m = s.model()
-    print('connected', m[connected])
-    print('belt_field', m[belt_field])
-    print_belt(m)
-else:
-    print('unsat!', s.check(), s.unsat_core())
+    print('Check time:', t2 - t1)
 
-print('Modelling time:', t1-t0)
-print('Check time:', t2-t1)
+    if str(check_res) == 'sat':
+        m = s.model()
+    #    print('connected', m[connected])
+    #    print('belt_field', m[belt_field])
+        print_belt(m)
+    else:
+        print('unsat!', s.check(), s.unsat_core())
+        break
+
+    s.pop()
+    used_belts = m.eval(belt_count)
+    print('belts:', used_belts)
+    t3 = time.time()
+    s.push()
+    s.add(belt_count < used_belts)
+    print('Tweaking time:', time.time() - t3)
