@@ -48,7 +48,7 @@ def print_belt(m):
             elif eq(MaybeDir.just(Dir.u), res):
                 ch = '^'
             elif eq(MaybeDir.just(Dir.d), res):
-                ch = '_'
+                ch = 'v'
             else:
                 raise Exception('strange dir')
             print(ch,end='')
