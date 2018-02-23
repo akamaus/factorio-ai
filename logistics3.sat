@@ -1,0 +1,110 @@
+(declare-datatypes (A) ((Maybe (just (getJust A))
+                               nothing)))
+
+; Pos and dir
+(declare-datatypes () ((Pos (mkPos (x Int) (y Int)))))
+(declare-datatypes () ((Dir U D L R)))
+
+(define-fun valid_pos ((p Pos)) Bool
+                (and (>= (x p) 0)
+                     (>= (y p) 0)
+                     (< (x p) 2)
+                     (< (y p) 2)))
+
+(assert (forall ((p Pos)) (valid_pos p)))
+
+(push)
+(echo "Pos exists")
+(declare-const p Pos)
+(check-sat)
+(get-value (p))
+(pop)
+
+(declare-fun move (Dir Pos) Pos)
+(assert (forall ((p Pos)) (let ((p2 (mkPos (x p) (- (y p) 1)))) (=> (and (valid_pos p) (valid_pos p2)) (= (move U p) p2)))))
+(assert (forall ((p Pos)) (let ((p2 (mkPos (x p) (+ (y p) 1)))) (=> (and (valid_pos p) (valid_pos p2)) (= (move D p) p2)))))
+(assert (forall ((p Pos)) (let ((p2 (mkPos (+ (x p) 1) (y p)))) (=> (and (valid_pos p) (valid_pos p2)) (= (move R p) p2)))))
+(assert (forall ((p Pos)) (let ((p2 (mkPos (- (x p) 1) (y p)))) (=> (and (valid_pos p) (valid_pos p2)) (= (move L p) p2)))))
+
+(push)
+(echo "move Works")
+(assert (= (move R (move D (mkPos 0 0))) (mkPos 1 1)))
+(check-sat)
+(pop)
+
+;; connectivity
+(declare-fun belt_field (Pos) (Maybe Dir))
+
+(declare-fun connected (Pos Pos) Bool) ; args: src dst
+(assert (forall ((p Pos) (q Pos)) (=> (or (not (valid_pos p))
+                                          (not (valid_pos p)))
+                                      (not (connected p q)))))
+
+
+(assert (forall ((p Pos) (q Pos) (r Pos))
+                (=> (and (connected p q)
+                         (connected q r))
+                    (connected p r))))
+
+(assert (forall ((p Pos)) (let ((md (belt_field p)))
+                            (=> (not (= md nothing))
+                                (connected p (move (getJust md) p))))))
+(assert (forall ((p Pos)) (let ((md (belt_field p)))
+                            (=> (= md nothing)
+                                (not
+                                 (or (connected p (move U p))
+                                     (connected p (move D p))
+                                     (connected p (move L p))
+                                     (connected p (move R p))))))))
+
+(push)
+(echo "connect works in small")
+(define-const P1 Pos (mkPos 0 0))
+(define-const P2 Pos (mkPos 0 1))
+
+(assert (connected P1 P2))
+(check-sat)
+(get-model)
+(pop)
+
+
+
+(define-fun near1 ((a Int) (b Int)) Bool (or (= (- a b) 1)
+                                             (= (- b a) 1)))
+
+(define-fun neigh ((p1 Pos) (p2 Pos)) Bool (or (and (= (x p1) (x p2)) (near1 (y p1) (y p2)))
+                                                   (and (= (y p1) (y p2)) (near1 (x p1) (x p2)))))
+
+(define-const P1 Pos (mkPos 0 0))
+(define-const P2 Pos (mkPos 1 1))
+(define-const P3 Pos (mkPos 0 1))
+
+(declare-const L Int)
+(assert (>= L 2))
+(assert (= (path 1) P1))
+(assert (= (path L) P2))
+
+(define-fun proper_idx ((k Int)) Bool (and (>= k 1)
+                                           (<= k L)))
+
+; self-checks
+(assert (near1 0 1))
+(assert (near1 1 0))
+(assert (neigh P1 P3))
+
+(assert (forall ((k1 Int) (k2 Int))
+                (=> (and (= (- k2 k1) 1)
+                         (proper_idx k1)
+                         (proper_idx k2))
+                    (neigh (path k1) (path k2)))))
+
+(assert (forall ((k1 Int) (k2 Int))
+                (=> (and (proper_idx k1)
+                         (proper_idx k2)
+                         (= (path k1) (path k2)))
+                    (= k1 k2))))
+
+(assert (<= L 16))
+
+(check-sat)
+(get-model)

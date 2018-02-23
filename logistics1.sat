@@ -1,0 +1,29 @@
+
+(declare-fun path_x (Int) Int)
+(declare-fun path_y (Int) Int)
+
+(define-fun near1 ((a Int) (b Int)) Bool (or (= (- a b) 1)
+                                             (= (- b a) 1)))
+(define-fun neigh ((x1 Int) (y1 Int) (x2 Int) (y2 Int)) Bool (or (and (= x1 x2) (near1 y1 y2))
+                                                                 (and (= y1 y2) (near1 x1 x2))))
+
+(define-const X1 Int 0)
+(define-const Y1 Int 0)
+(define-const X2 Int 1)
+(define-const Y2 Int 1)
+
+(declare-const L Int)
+
+(assert (= (path_x 1) X1))
+(assert (= (path_y 1) Y1))
+(assert (= (path_x L) X2))
+(assert (= (path_y L) Y2))
+
+(assert (forall ((k1 Int) (k2 Int))
+                (=> (and (= (- k2 k1) 1)
+                         (< k1 L) (< k2 L)
+                         (> k1 0) (> k2 0))
+                    (neigh (path_x k1) (path_y k1) (path_x k2) (path_y k2)))))
+
+(check-sat)
+(get-model)

@@ -1,0 +1,43 @@
+(declare-datatypes () ((Point (mkPoint (x Int) (y Int)))))
+
+(declare-fun path (Int) Point)
+
+(define-fun near1 ((a Int) (b Int)) Bool (or (= (- a b) 1)
+                                             (= (- b a) 1)))
+
+(define-fun neigh ((p1 Point) (p2 Point)) Bool (or (and (= (x p1) (x p2)) (near1 (y p1) (y p2)))
+                                                   (and (= (y p1) (y p2)) (near1 (x p1) (x p2)))))
+
+(define-const P1 Point (mkPoint 0 0))
+(define-const P2 Point (mkPoint 10 5))
+(define-const P3 Point (mkPoint 0 1))
+
+(declare-const L Int)
+(assert (>= L 2))
+(assert (= (path 1) P1))
+(assert (= (path L) P2))
+
+(define-fun proper_idx ((k Int)) Bool (and (>= k 1)
+                                           (<= k L)))
+
+; self-checks
+(assert (near1 0 1))
+(assert (near1 1 0))
+(assert (neigh P1 P3))
+
+(assert (forall ((k1 Int) (k2 Int))
+                (=> (and (= (- k2 k1) 1)
+                         (proper_idx k1)
+                         (proper_idx k2))
+                    (neigh (path k1) (path k2)))))
+
+(assert (forall ((k1 Int) (k2 Int))
+                (=> (and (proper_idx k1)
+                         (proper_idx k2)
+                         (= (path k1) (path k2)))
+                    (= k1 k2))))
+
+(assert (<= L 16))
+
+(check-sat)
+(get-model)
