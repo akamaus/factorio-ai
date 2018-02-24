@@ -17,11 +17,11 @@ Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
 
-SZ = 2
+SZ = 7
 
 cells_dir = [[Const('cells_dir_%s_%s' % (j, i), Dir) for i in range(SZ)] for j in range(SZ)]
-cells_src = [[Bool('cells_src_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
 cells_sup = [[Bool('cells_sup_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
+cells_dst = [[Int('cells_req_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
 
 
 def all_coords():
@@ -95,49 +95,60 @@ for i,j in all_coords():
 s.add(belt_count == sum)
 
 
+# forward chain
 for i, j in all_coords():
     vars = []
-    src = cells_src[i][j]
-    sup = cells_sup[i][j]
+    dst = cells_dst[i][j]
     d = cells_dir[i][j]
 
+    vars.append(d == Dir.nodir)
     if i > 0:
-        vars.append(Implies(d == Dir.u, cells_src[i-1][j]))
+        s.add(Implies(d == Dir.u, cells_dst[i-1][j] == dst + 1))
     if i < SZ-1:
-        vars.append(Implies(d == Dir.d, cells_src[i+1][j]))
+        s.add(Implies(d == Dir.d, cells_dst[i+1][j] == dst + 1))
     if j > 0:
-        vars.append(Implies(d == Dir.l, cells_src[i][j-1]))
+        s.add(Implies(d == Dir.l, cells_dst[i][j-1] == dst + 1))
     if j < SZ-1:
-        vars.append(Implies(d == Dir.r, cells_src[i][j+1]))
+        s.add(Implies(d == Dir.r, cells_dst[i][j+1] == dst + 1))
 
-    s.add(Implies(src, sup))
-    s.add(Implies(src, Or(*vars)))
 
+# backward chain
 for i, j in all_coords():
-    src_vars = []
-    src = cells_src[i][j]
-    sup = cells_sup[i][j]
-    d = cells_dir[i][j]
+    vars = []
+    dst = cells_dst[i][j]
 
+    vars.append(And(cells_dir[i][j] == Dir.nodir, dst == 0))
+    vars.append(And(cells_sup[i][j], cells_dst[i][j] == 1))
     if i > 0:
-        src_vars.append(And(cells_dir[i-1][j] == Dir.d, cells_src[i-1][j]))
+        vars.append(And(cells_dir[i-1][j] == Dir.d, cells_dst[i-1][j] + 1 == dst))
     if i < SZ-1:
-        src_vars.append(And(cells_dir[i+1][j] == Dir.u, cells_src[i+1][j]))
+        vars.append(And(cells_dir[i+1][j] == Dir.u, cells_dst[i+1][j] + 1 == dst))
     if j > 0:
-        src_vars.append(And(cells_dir[i][j-1] == Dir.r, cells_src[i][j-1]))
+        vars.append(And(cells_dir[i][j-1] == Dir.r, cells_dst[i][j-1] + 1 == dst))
     if j < SZ-1:
-        src_vars.append(And(cells_dir[i][j+1] == Dir.l, cells_src[i][j+1]))
+        vars.append(And(cells_dir[i][j+1] == Dir.l, cells_dst[i][j+1] + 1 == dst))
 
-    s.add(Implies(sup, Or(*src_vars)))
+    s.add(Or(*vars))
 
 
-c1 = cells_src[0][0]
+c1 = (0,0)
 #c2 = cells[SZ-1][0]
 #c3 = cells[0][SZ-1]
-c4 = cells_sup[SZ-1][SZ-1]
+c4 = (SZ-1, SZ-1)
 
-s.add(c1)
-s.add(c4)
+# request satisfaction
+for i, j in all_coords():
+    sup = cells_sup[i][j]
+
+    if (i, j) == c1:
+        s.add(sup)
+    else:
+        s.add(Not(sup))
+
+    if (i, j) == c4:
+        s.add(cells_dst[i][j] > 0)
+
+    s.add()
 
 s.push()
 
