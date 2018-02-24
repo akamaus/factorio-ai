@@ -21,7 +21,8 @@ SZ = 7
 
 cells_dir = [[Const('cells_dir_%s_%s' % (j, i), Dir) for i in range(SZ)] for j in range(SZ)]
 cells_sup = [[Bool('cells_sup_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
-cells_dst = [[Int('cells_req_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
+cells_cons = [[Bool('cells_cons_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
+cells_dst = [[Int('cells_dst_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
 
 
 def all_coords():
@@ -48,6 +49,15 @@ def print_belt(m):
             else:
                 raise ValueError('strange dir', res)
             print(ch,end='')
+        print()
+
+
+def print_dst(m):
+    for i in range(SZ):
+        for j in range(SZ):
+            c = cells_dst[i][j]
+            res = m.eval(c)
+            print(res,end=' ')
         print()
 
 
@@ -101,15 +111,17 @@ for i, j in all_coords():
     dst = cells_dst[i][j]
     d = cells_dir[i][j]
 
-    vars.append(d == Dir.nodir)
+    vars.append(cells_cons[i][j])
+    vars.append(dst == 0)
     if i > 0:
-        s.add(Implies(d == Dir.u, cells_dst[i-1][j] == dst + 1))
+        vars.append(And(d == Dir.u, cells_dst[i-1][j] == dst - 1))
     if i < SZ-1:
-        s.add(Implies(d == Dir.d, cells_dst[i+1][j] == dst + 1))
+        vars.append(And(d == Dir.d, cells_dst[i+1][j] == dst - 1))
     if j > 0:
-        s.add(Implies(d == Dir.l, cells_dst[i][j-1] == dst + 1))
+        vars.append(And(d == Dir.l, cells_dst[i][j-1] == dst - 1))
     if j < SZ-1:
-        s.add(Implies(d == Dir.r, cells_dst[i][j+1] == dst + 1))
+        vars.append(And(d == Dir.r, cells_dst[i][j+1] == dst - 1))
+    s.add(Or(*vars))
 
 
 # backward chain
@@ -117,42 +129,47 @@ for i, j in all_coords():
     vars = []
     dst = cells_dst[i][j]
 
-    vars.append(And(cells_dir[i][j] == Dir.nodir, dst == 0))
-    vars.append(And(cells_sup[i][j], cells_dst[i][j] == 1))
-    if i > 0:
-        vars.append(And(cells_dir[i-1][j] == Dir.d, cells_dst[i-1][j] + 1 == dst))
-    if i < SZ-1:
-        vars.append(And(cells_dir[i+1][j] == Dir.u, cells_dst[i+1][j] + 1 == dst))
-    if j > 0:
-        vars.append(And(cells_dir[i][j-1] == Dir.r, cells_dst[i][j-1] + 1 == dst))
-    if j < SZ-1:
-        vars.append(And(cells_dir[i][j+1] == Dir.l, cells_dst[i][j+1] + 1 == dst))
+    s.add(cells_cons[i][j] == (dst == 1))
+    s.add(Implies(cells_sup[i][j], And(dst > 1))) # , cells_dir[i][j] != Dir.nodir)))
 
+    vars.append(cells_sup[i][j])
+    vars.append(dst == 0 ) # Not(cells_cons[i][j]))
+    if i > 0:
+        vars.append(And(cells_dir[i-1][j] == Dir.d, cells_dst[i-1][j] == dst + 1))
+    if i < SZ-1:
+        vars.append(And(cells_dir[i+1][j] == Dir.u, cells_dst[i+1][j] == dst + 1))
+    if j > 0:
+        vars.append(And(cells_dir[i][j-1] == Dir.r, cells_dst[i][j-1] == dst + 1))
+    if j < SZ-1:
+        vars.append(And(cells_dir[i][j+1] == Dir.l, cells_dst[i][j+1] == dst + 1))
     s.add(Or(*vars))
 
 
-c1 = (0,0)
-#c2 = cells[SZ-1][0]
-#c3 = cells[0][SZ-1]
-c4 = (SZ-1, SZ-1)
+
+srcs = [(0,0), (SZ-1,0), (0,SZ-1)]
+dst = (SZ-1, SZ-1)
 
 # request satisfaction
 for i, j in all_coords():
     sup = cells_sup[i][j]
+    cons = cells_cons[i][j]
 
-    if (i, j) == c1:
+    if (i, j) in srcs:
         s.add(sup)
     else:
         s.add(Not(sup))
 
-    if (i, j) == c4:
-        s.add(cells_dst[i][j] > 0)
+    if (i, j) == dst:
+        s.add(cons)
+    else:
+        s.add(Not(cons))
 
-    s.add()
 
 s.push()
 
 print('Modelling time:', time.time() - t0)
+t0 = time.time()
+
 while True:
     t1 = time.time()
     check_res = s.check()
@@ -176,3 +193,5 @@ while True:
     s.push()
     s.add(belt_count < used_belts)
     print('Tweaking time:', time.time() - t3)
+
+print('Full time', time.time() - t0)
