@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 
 from z3 import *
@@ -17,7 +17,8 @@ Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
 
-SZ = 7
+SZ = 8
+
 
 cells_dir = [[Const('cells_dir_%s_%s' % (j, i), Dir) for i in range(SZ)] for j in range(SZ)]
 cells_sup = [[Bool('cells_sup_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]

@@ -1,5 +1,4 @@
-#!/usr/bin/env python2
-from __future__ import print_function
+#!/usr/bin/env python3
 
 from z3 import *
 import time
@@ -17,7 +16,7 @@ Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
 
-SZ = 7
+SZ = 6
 
 Cell = DeclareSort('Cell')
 cells = [[Const('cell_%s_%s' % (j,i), Cell) for i in range(SZ)] for j in range(SZ)]
