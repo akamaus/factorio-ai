@@ -55,11 +55,13 @@ def print_belt(m):
             print(ch,end='')
         print()
 
-def print_path(m):
-    for i in range(SZ):
-        for j in range(SZ):
-            c = cells[i][j]
-            res = m.eval(belt_field(c))
+def print_path(m,c2):
+	for i in range(SZ):
+		for j in range(SZ):
+			c = cells[i][j]
+			res = m.eval(path_cost(c,c2))
+			print(res, end=' ')
+		print()	
 
 
 
@@ -118,15 +120,12 @@ for c1 in all_cells():
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
     for c2, d in pymoves(i, j):
-        #s.add(Implies(belt_field(c1) == d, connected(c1, c2)))
         s.add(Implies(belt_field(c1) == d, path_cost(c1, c2) == 1))
         s.add(Implies(path_cost(c1, c2) == 1, belt_field(c1) == d))
 
 for i, j, c1 in all_coord_cells():
     for c3 in all_cells():
-        if eq(c1, c3):
-            s.add(path_cost(c1,c3) == 0)
-        else:
+        if not eq(c1, c3):
             s.add(Implies(path_cost(c1,c3) > 0,
                           Or([And(path_cost(c1,c3) == path_cost(c2,c3)+1,
                                   path_cost(c2,c3) >= 0,
@@ -155,32 +154,44 @@ c4 = cells[SZ-1][SZ-1]
 s.add(path_cost(c1,c4) > 0)
 #s.add(path_cost(c2,c4) > 0)
 #s.add(path_cost(c3,c4) > 0)
+s.add(path_cost(cells[1][0], c4) > 0)
+s.add(path_cost(cells[0][1], c4) > 0)
+
+s.add(c1 == c2)
+
 
 #s.assert_and_track(belt_field(c2) == MaybeDir.nothing, 'no_back')
 
 s.push()
 
 print('Modelling time:', time.time() - t0)
-while True:
-    t1 = time.time()
-    check_res = s.check()
-    t2 = time.time()
 
-    print('Check time:', t2 - t1)
+def solve():
+	while True:
+	    t1 = time.time()
+	    check_res = s.check()
+	    t2 = time.time()
 
-    if str(check_res) == 'sat':
-        m = s.model()
-    #    print('connected', m[connected])
-    #    print('belt_field', m[belt_field])
-        print_belt(m)
-    else:
-        print('unsat!', s.check(), s.unsat_core())
-        break
+	    print('Check time:', t2 - t1)
 
-    s.pop()
-    used_belts = m.eval(belt_count)
-    print('belts:', used_belts)
-    t3 = time.time()
-    s.push()
-    s.add(belt_count < used_belts)
-    print('Tweaking time:', time.time() - t3)
+	    if str(check_res) == 'sat':
+	        m = s.model()
+	    #    print('connected', m[connected])
+	    #    print('belt_field', m[belt_field])
+	        print_belt(m)
+	        print("Path")
+	        print_path(m, c4)
+	    else:
+	        print('unsat!', s.check(), s.unsat_core())
+	        break
+
+	    s.pop()
+	    used_belts = m.eval(belt_count)
+	    print('belts:', used_belts)
+	    t3 = time.time()
+	    s.push()
+	    s.add(belt_count < used_belts)
+	    print('Tweaking time:', time.time() - t3)
+
+if __name__ == '__main__':
+	solve()
