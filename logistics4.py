@@ -16,17 +16,19 @@ Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
 
-SZ = 3
+SZ = 6
 
 
 Cell = DeclareSort('Cell')
 cells = [[Const('cell_%s_%s' % (j,i), Cell) for i in range(SZ)] for j in range(SZ)]
 
-
 def all_cells():
     for i in range(SZ):
         for j in range(SZ):
             yield cells[i][j]
+
+
+s.add(Distinct(*[c for c in all_cells()]))
 
 
 def all_coord_cells():
@@ -152,46 +154,39 @@ c3 = cells[0][SZ-1]
 c4 = cells[SZ-1][SZ-1]
 
 s.add(path_cost(c1,c4) > 0)
-#s.add(path_cost(c2,c4) > 0)
-#s.add(path_cost(c3,c4) > 0)
-s.add(path_cost(cells[1][0], c4) > 0)
-s.add(path_cost(cells[0][1], c4) > 0)
-
-s.add(c1 == c2)
-
-
-#s.assert_and_track(belt_field(c2) == MaybeDir.nothing, 'no_back')
+s.add(path_cost(c2,c4) > 0)
+s.add(path_cost(c3,c4) > 0)
 
 s.push()
 
 print('Modelling time:', time.time() - t0)
 
 def solve():
-	while True:
-	    t1 = time.time()
-	    check_res = s.check()
-	    t2 = time.time()
+    while True:
+        t1 = time.time()
+        check_res = s.check()
+        t2 = time.time()
 
-	    print('Check time:', t2 - t1)
+        print('Check time:', t2 - t1)
 
-	    if str(check_res) == 'sat':
-	        m = s.model()
-	    #    print('connected', m[connected])
-	    #    print('belt_field', m[belt_field])
-	        print_belt(m)
-	        print("Path")
-	        print_path(m, c4)
-	    else:
-	        print('unsat!', s.check(), s.unsat_core())
-	        break
+        if str(check_res) == 'sat':
+            m = s.model()
+        #    print('connected', m[connected])
+        #    print('belt_field', m[belt_field])
+            print_belt(m)
+            print("Path")
+            print_path(m, c4)
+        else:
+            print('unsat!', s.check(), s.unsat_core())
+            break
 
-	    s.pop()
-	    used_belts = m.eval(belt_count)
-	    print('belts:', used_belts)
-	    t3 = time.time()
-	    s.push()
-	    s.add(belt_count < used_belts)
-	    print('Tweaking time:', time.time() - t3)
+        s.pop()
+        used_belts = m.eval(belt_count)
+        print('belts:', used_belts)
+        t3 = time.time()
+        s.push()
+        s.add(belt_count < used_belts)
+        print('Tweaking time:', time.time() - t3)
 
 if __name__ == '__main__':
-	solve()
+    solve()
