@@ -55,6 +55,13 @@ def print_belt(m):
             print(ch,end='')
         print()
 
+def print_path(m):
+    for i in range(SZ):
+        for j in range(SZ):
+            c = cells[i][j]
+            res = m.eval(belt_field(c))
+
+
 
 def pymoves(i,j):
     """ Returns move variants as [(cell, dir)] """
@@ -103,17 +110,10 @@ for c in all_cells():
 
 s.add(belt_count == sum)
 
-# Antisimmetry
 for c1 in all_cells():
     for c2 in all_cells():
         s.add(Implies(path_cost(c1, c2) == 0, c1 == c2))
         s.add(Implies(c1 == c2, path_cost(c1, c2) == 0))
-        s.add(Implies(Not(path_cost(c1, c2) == 0), Not(c1 == c2)))
-        s.add(Implies(Not(c1 == c2), Not(path_cost(c1, c2) == 0)))
-
-for c1 in all_cells():
-    for c2 in all_cells():
-        s.add(Implies(path_cost(c1, c2) == 0, c1 == c2))
 
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
