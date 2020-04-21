@@ -16,7 +16,8 @@ Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
 
-SZ = 6
+SZ = 3
+
 
 Cell = DeclareSort('Cell')
 cells = [[Const('cell_%s_%s' % (j,i), Cell) for i in range(SZ)] for j in range(SZ)]
@@ -84,7 +85,8 @@ def inv_dir(d):
 
 
 belt_field = Function('belt_field', Cell, Dir)
-connected = Function('connected', Cell, Cell, BoolSort())
+#connected = Function('connected', Cell, Cell, BoolSort())
+path_cost = Function('cost', Cell, Cell, IntSort())
 
 belt_cost = Function('belt_cost', Dir, IntSort())
 s.add(belt_cost(Dir.nodir) == 0)
@@ -101,47 +103,44 @@ for c in all_cells():
 
 s.add(belt_count == sum)
 
-# Reflexivity
-for c in all_cells():
-    s.add(connected(c, c))
-
 # Antisimmetry
 for c1 in all_cells():
     for c2 in all_cells():
-        if not eq(c1,c2):
-            s.add(Implies(connected(c1, c2), Not(connected(c2, c1))))
+        s.add(Implies(path_cost(c1, c2) == 0, c1 == c2))
+        s.add(Implies(c1 == c2, path_cost(c1, c2) == 0))
+        s.add(Implies(Not(path_cost(c1, c2) == 0), Not(c1 == c2)))
+        s.add(Implies(Not(c1 == c2), Not(path_cost(c1, c2) == 0)))
 
+for c1 in all_cells():
+    for c2 in all_cells():
+        s.add(Implies(path_cost(c1, c2) == 0, c1 == c2))
 
 # belt connects neighbors
 for i,j, c1 in all_coord_cells():
     for c2, d in pymoves(i, j):
-        s.add(Implies(belt_field(c1) == d, connected(c1, c2)))
+        #s.add(Implies(belt_field(c1) == d, connected(c1, c2)))
+        s.add(Implies(belt_field(c1) == d, path_cost(c1, c2) == 1))
+        s.add(Implies(path_cost(c1, c2) == 1, belt_field(c1) == d))
 
-
-# connection by means of a belt
 for i, j, c1 in all_coord_cells():
     for c3 in all_cells():
-        if not eq(c1,c3):
-            s.add(Implies(connected(c1,c3),
-                          Or([And(belt_field(c1) == d,
-                                  connected(c2, c3))
-                                                for c2, d in pymoves(i, j)])))
+        if eq(c1, c3):
+            s.add(path_cost(c1,c3) == 0)
+        else:
+            s.add(Implies(path_cost(c1,c3) > 0,
+                          Or([And(path_cost(c1,c3) == path_cost(c2,c3)+1,
+                                  path_cost(c2,c3) >= 0,
+                                  belt_field(c1) == d) for c2,d in pymoves(i,j)])))
 
-for c1 in all_cells():
-    for i, j, c2 in all_coord_cells():
-        for c3, d in pymoves(i, j):
-            s.add(Implies(And(belt_field(c2) == d, connected(c1,c2)),
-                      (connected(c1,c3))))
 
-#
-# # backward induction
-# for c1 in all_cells():
-#     for i,j, c2 in all_coord_cells():
-#         if not eq(c1,c2):
-#             mvs = pymoves(i,j)
-#             vars = [ And(connected(c1,c3),
-#                          belt_field(c3) == MaybeDir.just(inv_dir(d))) for c3,d in mvs ]
-#             s.add(Implies(connected(c1,c2), Or(*vars)))
+
+
+            # for c1 in all_cells():
+#     for i, j, c2 in all_coord_cells():
+#         for c3, d in pymoves(i, j):
+#             s.add(Implies(And(belt_field(c2) == d, connected(c1, c2)),
+#                       (connected(c1, c3))))
+
 
 #s.assert_and_track(ForAll([c1,c2], Implies(c1 != c2, Or(And(connected(c1,c2), Not(connected(c2,c1))),
 #                                                       And(connected(c2,c1), Not(connected(c1,c2)))))), 'tst')
@@ -153,9 +152,9 @@ c2 = cells[SZ-1][0]
 c3 = cells[0][SZ-1]
 c4 = cells[SZ-1][SZ-1]
 
-s.add(connected(c1,c4))
-s.add(connected(c2,c4))
-s.add(connected(c3,c4))
+s.add(path_cost(c1,c4) > 0)
+#s.add(path_cost(c2,c4) > 0)
+#s.add(path_cost(c3,c4) > 0)
 
 #s.assert_and_track(belt_field(c2) == MaybeDir.nothing, 'no_back')
 
