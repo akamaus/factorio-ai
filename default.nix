@@ -11,8 +11,6 @@ let
   (ps: with ps;
   [
     ipython
-    jupyter
-    matplotlib
     numpy
     tqdm
     z3
