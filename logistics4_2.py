@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+""" Here we use only unary functions and trace locally in both directions.
+    If
 
+"""
 import os
-from z3 import *
 from time import time
+
+from z3 import *
 
 SZ = int(os.environ.get('SZ', '6'))
 
@@ -18,6 +22,20 @@ Dir.declare('l')
 Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
+
+
+def inv_dir(d):
+    """ Inverts direction """
+    if eq(d, Dir.u):
+        return Dir.d
+    elif eq(d, Dir.d):
+        return Dir.u
+    elif eq(d, Dir.l):
+        return Dir.r
+    elif eq(d, Dir.r):
+        return Dir.l
+    else:
+        assert ValueError('Strange dir', d)
 
 
 Cell = DeclareSort('Cell')
@@ -58,17 +76,26 @@ def print_belt(m):
             print(ch,end='')
         print()
 
+
 def print_path(m,c2):
-	for i in range(SZ):
-		for j in range(SZ):
-			c = cells[i][j]
-			res = m.eval(path_cost(c,c2))
-			print(res, end=' ')
-		print()	
+    for i in range(SZ):
+        for j in range(SZ):
+            c = cells[i][j]
+            res = m.eval(path_cost(c,c2))
+            print(res, end=' ')
+        print()
 
 
+def print_dist_to_sink(m):
+    for i in range(SZ):
+        for j in range(SZ):
+            c = cells[i][j]
+            res = m.eval(dist_to_sink(c))
+            print(res, end=' ')
+        print()
 
-def pymoves(i,j):
+
+def neighs(i, j):
     """ Returns move variants as [(cell, dir)] """
     res = []
     if i > 0:
@@ -82,23 +109,10 @@ def pymoves(i,j):
     return res
 
 
-def inv_dir(d):
-    """ Inverts direction """
-    if eq(d, Dir.u):
-        return Dir.d
-    elif eq(d, Dir.d):
-        return Dir.u
-    elif eq(d, Dir.l):
-        return Dir.r
-    elif eq(d, Dir.r):
-        return Dir.l
-    else:
-        assert ValueError('Strange dir', d)
-
-
 belt_field = Function('belt_field', Cell, Dir)
-#connected = Function('connected', Cell, Cell, BoolSort())
-path_cost = Function('cost', Cell, Cell, IntSort())
+dist_to_sink = Function('dist_to_sink', Cell, IntSort())
+source = Function('source', Cell, BoolSort())
+sink = Function('sink', Cell, BoolSort())
 
 
 belt_cost = Function('belt_cost', Dir, IntSort())
@@ -121,32 +135,27 @@ def Abs(x):
     return If(x >= 0, x, -x)
 
 
-# Just heuristic
-for i1,j1, c1 in all_coord_cells():
-    for i2, j2, c2 in all_coord_cells():
-        s.add(Or(path_cost(c1,c2) < 0, path_cost(c1,c2) >= abs(i1-i2) + abs(j1-j2)))
+for c in all_cells():
+    s.add(sink(c) == (dist_to_sink(c) == 0))
+    s.add(Implies(source(c), dist_to_sink(c) > 0))
 
 
-# Forward stacing
+# forward_tracing
 for i, j, c1 in all_coord_cells():
-    for c3 in all_cells():
-        if not eq(c1, c3):
-            s.add(Implies(path_cost(c1,c3) > 0,
-                          Or([And(path_cost(c1,c3) == path_cost(c2,c3)+1,
-                                  path_cost(c2,c3) >= 0,
-                                  belt_field(c1) == d) for c2,d in pymoves(i,j)])))
+    variants = []
+    for c2, d in neighs(i, j):
+        v = And(belt_field(c1) == d, dist_to_sink(c2) == dist_to_sink(c1)-1)
+        variants.append(v)
+    s.add(Implies(dist_to_sink(c1) > 0, Or(*variants)))
 
 
 # Backward tracing
 for i, j, c1 in all_coord_cells():
-    for c2, d in pymoves(i,j):
-        if not eq(c1, c3):
-            s.add(Implies(path_cost(c1,c3) > 0,
-                          Or([And(path_cost(c1,c3) == path_cost(c2,c3)+1,
-                                  path_cost(c2,c3) >= 0,
-                                  belt_field(c1) == d) for c2,d in pymoves(i,j)])))
-
-
+    variants = []
+    for c2, d in neighs(i, j):
+        v = And(dist_to_sink(c2) == dist_to_sink(c1) + 1, belt_field(c2) == inv_dir(d))
+        variants.append(v)
+    s.add(Implies(dist_to_sink(c1) >= 0, Or(source(c1), *variants)))
 
 
 c1 = cells[0][0]
@@ -154,13 +163,28 @@ c2 = cells[SZ-1][0]
 c3 = cells[0][SZ-1]
 c4 = cells[SZ-1][SZ-1]
 
-s.add(path_cost(c1,c4) > 0)
-s.add(path_cost(c2,c4) > 0)
-s.add(path_cost(c3,c4) > 0)
+s.add(dist_to_sink(c1) > 0)
+s.add(dist_to_sink(c2) > 0)
+s.add(dist_to_sink(c3) > 0)
+s.add(dist_to_sink(c4) == 0)
+
+def declare_all(pred, tgt_list):
+    for c in all_cells():
+        is_tgt = False
+        for t in tgt_list:
+            if eq(c, t):
+                is_tgt = True
+                break
+        s.add(pred(c) == is_tgt)
+
+
+declare_all(source, [c1,c2,c3])
+declare_all(sink, [c4])
+
 
 s.push()
-
 print('Modelling time:', time() - t0)
+
 
 def solve():
     while True:
@@ -175,19 +199,18 @@ def solve():
         #    print('connected', m[connected])
         #    print('belt_field', m[belt_field])
             print_belt(m)
-            print("Path")
-            print_path(m, c4)
+            #print("Path")
+            print_dist_to_sink(m)
         else:
-            print('unsat!', s.check(), s.unsat_core())
+            print('unsat!')
             break
 
         s.pop()
         used_belts = m.eval(belt_count)
         print('belts:', used_belts)
-        t3 = time()
         s.push()
         s.add(belt_count < used_belts)
-        print('Tweaking time:', time() - t3)
+        print('Tweaking time:', time() - t2)
 
 
 if __name__ == '__main__':

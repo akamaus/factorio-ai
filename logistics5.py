@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import print_function
 
+import os
+from time import time
 from z3 import *
-import time
+
+
+SZ = int(os.environ.get('SZ', '6'))
 
 s = Solver()
 #s.set(unsat_core=True)
 
-t0 = time.time()
+t0 = time()
 
 Dir = Datatype('Dir')
 Dir.declare('u')
@@ -16,9 +20,6 @@ Dir.declare('l')
 Dir.declare('r')
 Dir.declare('nodir')
 Dir = Dir.create()
-
-SZ = 8
-
 
 cells_dir = [[Const('cells_dir_%s_%s' % (j, i), Dir) for i in range(SZ)] for j in range(SZ)]
 cells_sup = [[Bool('cells_sup_%s_%s' % (j, i)) for i in range(SZ)] for j in range(SZ)]
@@ -168,31 +169,37 @@ for i, j in all_coords():
 
 s.push()
 
-print('Modelling time:', time.time() - t0)
-t0 = time.time()
+print('Modelling time:', time() - t0)
 
-while True:
-    t1 = time.time()
-    check_res = s.check()
-    t2 = time.time()
+def solve():
+    while True:
+        t1 = time()
+        check_res = s.check()
+        t2 = time()
 
-    print('Check time:', t2 - t1)
+        print('Check time:', t2 - t1)
 
-    if str(check_res) == 'sat':
-        m = s.model()
-    #    print('connected', m[connected])
-    #    print('belt_field', m[belt_field])
-        print_belt(m)
-    else:
-        print('unsat!', s.check(), s.unsat_core())
-        break
+        t3 = time()
 
-    s.pop()
-    used_belts = m.eval(belt_count)
-    print('belts:', used_belts)
-    t3 = time.time()
-    s.push()
-    s.add(belt_count < used_belts)
-    print('Tweaking time:', time.time() - t3)
+        if str(check_res) == 'sat':
+            m = s.model()
+        #    print('connected', m[connected])
+        #    print('belt_field', m[belt_field])
+            print_belt(m)
+        else:
+            print('unsat!', s.check(), s.unsat_core())
+            break
 
-print('Full time', time.time() - t0)
+        s.pop()
+        used_belts = m.eval(belt_count)
+        print('belts:', used_belts)
+        s.push()
+        s.add(belt_count < used_belts)
+        print('Tweaking time:', time() - t3)
+
+
+if __name__ == '__main__':
+    t1 = time()
+    solve()
+    t2 = time()
+    print('Solve time:', t2-t1)
