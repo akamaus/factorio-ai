@@ -99,6 +99,14 @@ def Abs(x):
     return z3.If(x >= 0, x, -x)
 
 
+def Max(x,y):
+    return z3.If(x > y, x, y)
+
+
+def Min(x, y):
+    return z3.If(x < y, x, y)
+
+
 class Belt:
     _IDX = 0
     def __init__(self):
@@ -155,3 +163,76 @@ def no_intersections(belt1: Belt, belt2: Belt):
     i,j = Consts("i j", IntSort())
     SOL.add(ForAll([i,j], Implies(And(0 <= i, i < belt1.belt_len, 0 <=j, j < belt2.belt_len),
                                   Not(belt1[i] == belt2[j]))))
+
+
+class Segment:
+    def __init__(self, p1:Point2D, p2:Point2D):
+        assert isinstance(p1, Point2D)
+        assert isinstance(p2, Point2D)
+        self.p1 = p1
+        self.p2 = p2
+
+
+def horizontal(s: Segment):
+    return s.p1.y == s.p2.y
+
+
+def vertical(s: Segment):
+    return s.p1.x == s.p2.x
+
+
+class SegmentedBelt:
+    _IDX = 0
+    def __init__(self):
+        self.corners_x = Function(f'seg_belt{self._IDX}_x', IntSort(), IntSort())
+        self.corners_y = Function(f'seg_belt{self._IDX}_y', IntSort(), IntSort())
+        self.num_segs = Const(f'seg_belt{self._IDX}_num_segs', IntSort())
+        SOL.add(self.num_segs > 0)
+
+        i,j = Consts("i j", IntSort())
+        SOL.add(ForAll([i], Implies(And(0 <= i, i < self.num_segs),
+                                    Or(horizontal(self.segment(i)),
+                                       vertical(self.segment(i))))))
+
+        self.__class__._IDX += 1
+
+    def segment(self, i) -> Segment:
+        return Segment(Point2D(self.corners_x(i), self.corners_y(i)), Point2D(self.corners_x(i+1), self.corners_y(i+1)))
+
+    def source(self):
+        return Point2D(self.corners_x(0), self.corners_y(0))
+
+    def sink(self):
+        return Point2D(self.corners_x(self.num_segs), self.corners_y(self.num_segs))
+
+    def eval_corners(self)->T.List[T.Tuple[int, int]]:
+        points = []
+        nc = SOL.eval(self.num_segs).as_long() + 1
+        for i in range(nc):
+            p = Point2D(self.corners_x(i), self.corners_y(i))
+            t = p.eval_as_tuple()
+            points.append(t)
+        return points
+
+    # convenience
+    def fix_ends(self, source, sink):
+        SOL.add(self.source() == source)
+        SOL.add(self.sink() == sink)
+
+
+def non_intersecting_segs(s1: Segment, s2: Segment):
+    assert isinstance(s1, Segment)
+    assert isinstance(s2, Segment)
+    return Or(Max(s1.p1.x, s1.p2.x) < Min(s2.p1.x, s2.p2.x),
+              Max(s1.p1.y, s1.p2.y) < Min(s2.p1.y, s2.p2.y),
+              Max(s2.p1.x, s2.p2.x) < Min(s1.p1.x, s1.p2.x),
+              Max(s2.p1.y, s2.p2.y) < Min(s1.p1.y, s1.p2.y))
+
+
+def non_intersecting_seg_belts(belt1: SegmentedBelt , belt2: SegmentedBelt):
+    assert isinstance(belt1, SegmentedBelt)
+    assert isinstance(belt2, SegmentedBelt)
+
+    i,j = Consts("i j", IntSort())
+    SOL.add(ForAll([i,j], Implies(And(0 <= i, i < belt1.num_segs, 0 <=j, j < belt2.num_segs),
+                                  non_intersecting_segs(belt1.segment(i), belt2.segment(j)))))

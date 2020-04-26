@@ -1,7 +1,8 @@
 import unittest
 
 from primitives import SOL, neighs, Abs, IntVal, \
-    Point2D, Belt
+    Point2D, Belt, \
+    SegmentedBelt, Segment, non_intersecting_segs
 
 class TestPrimitives(unittest.TestCase):
     def setUp(self) -> None:
@@ -52,3 +53,60 @@ class TestPrimitives(unittest.TestCase):
             lens.append(l)
 
         self.assertEqual(lens[-1], 9)
+
+    def test_one_seg_belt(self):
+        sbelt = SegmentedBelt()
+        sbelt.fix_ends(source=(10, 10), sink=(15, 10))
+        SOL.add(sbelt.num_segs == 1)
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+        p1, p2 = sbelt.segment(0)
+        self.assertEqual(p1.eval_as_tuple(), (10,10))
+        self.assertEqual(p2.eval_as_tuple(), (15,10))
+
+    def test_two_seg_belt(self):
+        sbelt = SegmentedBelt()
+        sbelt.fix_ends(source=(10, 10), sink=(15, 15))
+        SOL.add(sbelt.num_segs == 2)
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+        p1, p2 = sbelt.segment(0)
+        print(p1.eval_as_tuple(),p2.eval_as_tuple())
+
+        self.assertEqual(p1.eval_as_tuple(), (10,10))
+        self.assertTrue(p2.eval_as_tuple() in [(15,10), (10,15)])
+
+        p1, p2 = sbelt.segment(1)
+        self.assertEqual(p2.eval_as_tuple(), (15,15))
+
+    def test_seg_belt_shrink(self):
+        sbelt = SegmentedBelt()
+        sbelt.fix_ends(source=(10,10), sink=(15,15))
+        seg_nums = []
+        for l in SOL.shrinker_loop(sbelt.num_segs, init=10):
+            seg_nums.append(l)
+        self.assertEqual(seg_nums[-1], 2)
+
+    def test_intersecting_segments1(self):
+        s1 = Segment(Point2D(0,0), Point2D(10,0))
+        s2 = Segment(Point2D(5, 5), Point2D(5, -5))
+        SOL.add(non_intersecting_segs(s1, s2))
+        m = SOL.model()
+        self.assertIsNone(m)
+    
+    def test_intersecting_segments2(self):
+        s1 = Segment(Point2D(0,0), Point2D(10,0))
+        s2 = Segment(Point2D(5, 5), Point2D(5, -5))
+        SOL.add(non_intersecting_segs(s2, s1))
+        m = SOL.model()
+        self.assertIsNone(m)
+
+    def test_non_intersecting_segments1(self):
+        s1 = Segment(Point2D(0, 0), Point2D(10, 0))
+        s2 = Segment(Point2D(12, 5), Point2D(12, -5))
+        SOL.add(non_intersecting_segs(s1, s2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+        
