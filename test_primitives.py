@@ -1,8 +1,11 @@
 import unittest
+import z3
 
 from primitives import SOL, neighs, Abs, IntVal, \
     Point2D, Belt, \
-    SegmentedBelt, Segment, non_intersecting_segs
+    SegmentedBelt, Segment, non_intersecting_segs, \
+    Rectangle, \
+    Dir, dir_to_disp, Inserter
 
 class TestPrimitives(unittest.TestCase):
     def setUp(self) -> None:
@@ -61,9 +64,9 @@ class TestPrimitives(unittest.TestCase):
         m = SOL.model()
         self.assertIsNotNone(m)
 
-        p1, p2 = sbelt.segment(0)
-        self.assertEqual(p1.eval_as_tuple(), (10,10))
-        self.assertEqual(p2.eval_as_tuple(), (15,10))
+        s = sbelt.segment(0)
+        self.assertEqual(s.p1.eval_as_tuple(), (10,10))
+        self.assertEqual(s.p2.eval_as_tuple(), (15,10))
 
     def test_two_seg_belt(self):
         sbelt = SegmentedBelt()
@@ -72,13 +75,16 @@ class TestPrimitives(unittest.TestCase):
         m = SOL.model()
         self.assertIsNotNone(m)
 
-        p1, p2 = sbelt.segment(0)
-        print(p1.eval_as_tuple(),p2.eval_as_tuple())
+        s = sbelt.segment(0)
+        p1 = s.p1
+        p2 = s.p2
+        print(p1.eval_as_tuple(), p2.eval_as_tuple())
 
         self.assertEqual(p1.eval_as_tuple(), (10,10))
         self.assertTrue(p2.eval_as_tuple() in [(15,10), (10,15)])
 
-        p1, p2 = sbelt.segment(1)
+        s = sbelt.segment(1)
+        p2 = s.p2
         self.assertEqual(p2.eval_as_tuple(), (15,15))
 
     def test_seg_belt_shrink(self):
@@ -110,3 +116,47 @@ class TestPrimitives(unittest.TestCase):
         m = SOL.model()
         self.assertIsNotNone(m)
         
+    def test_intersecting_rectangles(self):
+        r1 = Rectangle(3,3, x=0,y=0)
+        r2 = Rectangle(3,3, x=2, y=2)
+        SOL.add(r1.intersecting(r2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+    def test_non_intersecting_rectangles(self):
+        r1 = Rectangle(x=0,y=0, size_x=2, size_y=2)
+        r2 = Rectangle(x=2,y=0, size_x=3, size_y=3)
+        SOL.add(r1.non_intersecting(r2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+    def test_dir_to_disp(self):
+        disp = dir_to_disp(Dir.u)
+        self.assertEqual(0, disp[0])
+        self.assertEqual(1, disp[1])
+
+    def test_dir_to_disp_static(self):
+        disp = dir_to_disp(Dir.u)
+        self.assertEqual(0, disp[0])
+        self.assertEqual(1, disp[1])
+
+    def test_dir_to_disp_dynamic(self):
+        dr = z3.Const('dir', Dir)
+        SOL.add(dr == Dir.u)
+        disp = dir_to_disp(dr)
+        m = SOL.model()
+        self.assertEqual(0, SOL.eval(disp[0]))
+        self.assertEqual(1, SOL.eval(disp[1]))
+
+    def test_inserter_chain(self):
+        in1 = Inserter()
+        in2 = Inserter()
+        SOL.add(in1.source() == (0,0))
+        SOL.add(in2.source() == in1.sink())
+        SOL.add(in2.sink() == (4,0))
+
+        self.assertIsNotNone(SOL.model())
+        self.assertEqual((2,0), in1.sink().eval_as_tuple())
+        self.assertEqual((1, 0), in1.pos.eval_as_tuple())
+        self.assertTrue(in1.dir.eval().eq(Dir.r))
+        self.assertTrue(in2.dir.eval().eq(Dir.r))

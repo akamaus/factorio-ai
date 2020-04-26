@@ -3,6 +3,7 @@ import z3
 from z3 import Const, IntSort, And, Or, Function, Consts, ForAll, Implies, Not
 
 
+# General
 class SolverWrapper:
     def __init__(self):
         self._sol = None
@@ -15,7 +16,14 @@ class SolverWrapper:
         self._sol.add(*args)
 
     def eval(self, *args):
-        return self._sol.model().eval(*args)
+        res = self._sol.model().eval(*args)
+        if isinstance(res, z3.IntNumRef):
+            res = res.as_long()
+        elif isinstance(res, z3.DatatypeRef):
+            pass
+        else:
+            raise ValueError('unknown result', type(res), res)
+        return res
 
     def model(self):
         chk = self._sol.check()
@@ -31,7 +39,7 @@ class SolverWrapper:
             self._sol.add(scalar <= init)
         best_val = None
         while self._sol.check().r == 1:
-            scalar_val = self.eval(scalar).as_long()
+            scalar_val = self.eval(scalar)
             best_val = scalar_val
             yield scalar_val
             self._sol.pop()
@@ -52,12 +60,12 @@ SOL: SolverWrapper = SolverWrapper()
 
 class IntVal:
     _IDX = 0
-    def __init__(self):
-        self.v = Const(f'intval{self._IDX}', IntSort())
+    def __init__(self, label=''):
+        self.v = Const(f'intval_{label}{self._IDX}', IntSort())
         self.__class__._IDX += 1
 
     def eval(self):
-        return SOL.eval(self.v).as_long()
+        return SOL.eval(self.v)
 
 
 class Point2D:
@@ -78,9 +86,17 @@ class Point2D:
             x,y = other
         return And(self.x == x, self.y == y)
 
+    def __add__(self, disp: tuple):
+        assert isinstance(disp, tuple)
+        return Point2D(self.x + disp[0], self.y + disp[1])
+
+    def __sub__(self, disp: tuple):
+        assert isinstance(disp, tuple)
+        return Point2D(self.x - disp[0], self.y - disp[1])
+
     def eval_as_tuple(self):
-        x = SOL.eval(self.x).as_long()
-        y = SOL.eval(self.y).as_long()
+        x = SOL.eval(self.x)
+        y = SOL.eval(self.y)
         return x,y
 
 
@@ -107,6 +123,7 @@ def Min(x, y):
     return z3.If(x < y, x, y)
 
 
+# Belts
 class Belt:
     _IDX = 0
     def __init__(self):
@@ -136,7 +153,7 @@ class Belt:
 
     def lazy_points(self)->T.List[Point2D]:
         m = SOL.model()
-        blen = m.eval(self.belt_len).as_long()
+        blen = m.eval(self.belt_len)
         points = []
         for k in range(0, blen):
             points.append(self[k])
@@ -144,7 +161,8 @@ class Belt:
 
     def eval_points(self)->T.List[T.Tuple[int,int]]:
         m = SOL.model()
-        blen = m.eval(self.belt_len).as_long()
+        assert(m)
+        blen = SOL.eval(self.belt_len)
         points = []
         for k in range(0, blen):
             points.append(self[k].eval_as_tuple())
@@ -207,7 +225,7 @@ class SegmentedBelt:
 
     def eval_corners(self)->T.List[T.Tuple[int, int]]:
         points = []
-        nc = SOL.eval(self.num_segs).as_long() + 1
+        nc = SOL.eval(self.num_segs) + 1
         for i in range(nc):
             p = Point2D(self.corners_x(i), self.corners_y(i))
             t = p.eval_as_tuple()
@@ -236,3 +254,87 @@ def non_intersecting_seg_belts(belt1: SegmentedBelt , belt2: SegmentedBelt):
     i,j = Consts("i j", IntSort())
     SOL.add(ForAll([i,j], Implies(And(0 <= i, i < belt1.num_segs, 0 <=j, j < belt2.num_segs),
                                   non_intersecting_segs(belt1.segment(i), belt2.segment(j)))))
+
+
+# Buildings
+class Rectangle:
+    """ Generic class for all rectangular things, supports both floating and fixed locations """
+    def __init__(self, size_x, size_y,  x=None, y=None):
+        self.x = x if x is not None else IntVal('rectx').v
+        self.y = y if y is not None else IntVal('recty').v
+
+        self.size_x = size_x
+        self.size_y = size_y
+
+    def to_diag_seg(self):
+        return Segment(Point2D(self.x, self.y), Point2D(self.x + (self.size_x-1), self.y + (self.size_y-1)))
+
+    def non_intersecting(self, other: 'Rectangle'):
+        assert isinstance(other, Rectangle)
+        s1 = self.to_diag_seg()
+        s2 = other.to_diag_seg()
+
+        return Or(s1.p2.x < s2.p1.x, s1.p2.y < s2.p1.y,
+                  s2.p2.x < s1.p1.x, s2.p2.y < s1.p1.y)
+
+    def intersecting(self, other: 'Rectangle'):
+        return Not(self.non_intersecting(other))
+
+    def contains(self, p: Point2D):
+        assert isinstance(p, Point2D)
+        s = self.to_diag_seg()
+        return And(s.p1.x <= p.x, p.x <= s.p2.x,
+                   s.p1.y <= p.y, p.y <= s.p2.y)
+
+
+Dir = z3.Datatype('Dir')
+Dir.declare('u')
+Dir.declare('d')
+Dir.declare('l')
+Dir.declare('r')
+Dir = Dir.create()
+
+
+class DirVal:
+    _IDX = 0
+    def __init__(self, label=''):
+        self.v = Const(f'dirval_{label}{self._IDX}', Dir)
+        self.__class__._IDX += 1
+
+    def eval(self):
+        return SOL.eval(self.v)
+
+
+def dir_to_disp(x: T.Union[DirVal, z3.DatatypeRef]) -> tuple:
+    if isinstance(x, DirVal):
+        x = x.v
+
+    assert isinstance(x, z3.DatatypeRef)
+    if x.eq(Dir.u):
+        res = (0,1)
+    elif x.eq(Dir.d):
+        res = (0, -1)
+    elif x.eq(Dir.r):
+        res = (1, 0)
+    elif x.eq(Dir.l):
+        res = (-1, 0)
+    else:
+        If = z3.If
+        res_x = If(Dir.is_r(x), 1, If(Dir.is_l(x), -1, 0))
+        res_y = If(Dir.is_u(x), 1, If(Dir.is_d(x), -1, 0))
+        res = (res_x, res_y)
+    return res
+
+
+class Inserter:
+    def __init__(self):
+        self.pos = Point2D()
+        self.dir = DirVal()
+
+    def source(self) -> Point2D:
+        disp = dir_to_disp(self.dir)
+        return self.pos - disp
+
+    def sink(self) -> Point2D:
+        disp = dir_to_disp(self.dir)
+        return self.pos + disp
