@@ -94,6 +94,11 @@ class Point2D:
         assert isinstance(disp, tuple)
         return Point2D(self.x - disp[0], self.y - disp[1])
 
+    def eval(self):
+        x = SOL.eval(self.x)
+        y = SOL.eval(self.y)
+        return Point2D(x,y)
+
     def eval_as_tuple(self):
         x = SOL.eval(self.x)
         y = SOL.eval(self.y)
@@ -260,14 +265,13 @@ def non_intersecting_seg_belts(belt1: SegmentedBelt , belt2: SegmentedBelt):
 class Rectangle:
     """ Generic class for all rectangular things, supports both floating and fixed locations """
     def __init__(self, size_x, size_y,  x=None, y=None):
-        self.x = x if x is not None else IntVal('rectx').v
-        self.y = y if y is not None else IntVal('recty').v
+        self.pos = Point2D(x,y)
 
         self.size_x = size_x
         self.size_y = size_y
 
     def to_diag_seg(self):
-        return Segment(Point2D(self.x, self.y), Point2D(self.x + (self.size_x-1), self.y + (self.size_y-1)))
+        return Segment(self.pos, self.pos + (self.size_x-1, self.size_y-1))
 
     def non_intersecting(self, other: 'Rectangle'):
         assert isinstance(other, Rectangle)
@@ -285,6 +289,24 @@ class Rectangle:
         s = self.to_diag_seg()
         return And(s.p1.x <= p.x, p.x <= s.p2.x,
                    s.p1.y <= p.y, p.y <= s.p2.y)
+
+
+def non_intersecting_rectangles(*rects: T.List[Rectangle]):
+    if len(rects) == 1 and isinstance(rects[0], list):
+        rects = rects[0]
+    assert len(rects) >= 2
+    cases = []
+    for i in range(len(rects)):
+        assert isinstance(rects[i], Rectangle)
+        for j in range(i+1, len(rects)):
+            cases.append(rects[i].non_intersecting(rects[j]))
+    return And(cases)
+
+
+
+class AssemblyMachine(Rectangle):
+    def __init__(self, x=None, y=None):
+        super().__init__(3,3, x, y)
 
 
 Dir = z3.Datatype('Dir')
@@ -338,3 +360,11 @@ class Inserter:
     def sink(self) -> Point2D:
         disp = dir_to_disp(self.dir)
         return self.pos + disp
+
+
+def connection(r1: Rectangle, ins: Inserter, r2: Rectangle):
+    assert isinstance(r1, Rectangle)
+    assert isinstance(r2, Rectangle)
+    assert isinstance(ins, Inserter)
+    return And(Not(r1.contains(ins.pos)), Not(r2.contains(ins.pos)),
+               r1.contains(ins.source()), r2.contains(ins.sink()))
