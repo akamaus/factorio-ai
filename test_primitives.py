@@ -131,7 +131,7 @@ class TestPrimitives(unittest.TestCase):
             pass
         self.assertEqual(4, d)
 
-    def test_contains(self):
+    def test_seg_contains(self):
         sb = SegmentedBelt()
         SOL.add(sb.num_segs >= 2)
         SOL.add(sb.segment(0).contains(Point2D(5,2)))
@@ -140,6 +140,17 @@ class TestPrimitives(unittest.TestCase):
         SOL.model()
         c1 = SOL.eval(sb.corner(1))
         self.assertEqual(c1, Point2D(10,2))
+
+    def test_seg_belt_contains(self):
+        sb = SegmentedBelt()
+        SOL.add(sb.contains(Point2D(0, 0)))
+        SOL.add(sb.contains(Point2D(10, 10)))
+        d = None
+        for d in SOL.shrinker_loop(sb.num_segs):
+            pass
+        self.assertEqual(2, d)
+
+
 
     def test_intersecting_rectangles(self):
         r1 = Rectangle(3,3, x=0,y=0)

@@ -224,6 +224,7 @@ class Segment:
         return self.p1.x == self.p2.x
 
     def contains(self, p: Point2D):
+        assert isinstance(p, Point2D)
         assert not self.is_diag
         return Or(And(self.horizontal(), self.p1.y == p.y,  self.p1.x <= p.x, p.x <= self.p2.x),
                   And(self.vertical(), self.p1.x == p.x, self.p1.y <= p.y, p.y <= self.p2.y))
@@ -254,6 +255,13 @@ class SegmentedBelt:
 
     def sink(self):
         return Point2D(self.corners_x(self.num_segs), self.corners_y(self.num_segs))
+
+    def not_contains(self, p: Point2D):
+        i = Const("i", IntSort())
+        return (ForAll([i], Implies(And(0 <= i, i < self.num_segs), Not(self.segment(i).contains(p)))))
+
+    def contains(self, p: Point2D):
+        return Not(self.not_contains(p))
 
     def eval_corners(self)->T.List[T.Tuple[int, int]]:
         points = []
