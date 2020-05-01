@@ -122,7 +122,7 @@ class TestPrimitives(unittest.TestCase):
         SOL.add(sb.corner(1) == Point2D(10, 0))
         SOL.add(sb.sink() == Point2D(20, 0))
         SOL.add(sb.num_segs >= 2)
-        ds = Segment(Point2D(), Point2D())
+        ds = Segment(Point2D(), Point2D(), is_diag=True)
         SOL.add(ds.p1 == Point2D(12, 0))
         SOL.add(ds.p2 == Point2D(15, 3))
         SOL.add(non_intersecting_seg_belt_diag_seg(sb, ds))

@@ -207,20 +207,24 @@ def no_intersections(belt1: Belt, belt2: Belt):
 
 
 class Segment:
-    def __init__(self, p1:Point2D, p2:Point2D):
+    def __init__(self, p1:Point2D, p2:Point2D, is_diag:bool=False):
         assert isinstance(p1, Point2D)
         assert isinstance(p2, Point2D)
         self.p1 = p1
         self.p2 = p2
+        self.is_diag = is_diag
 
 
     def horizontal(self):
+        assert not self.is_diag
         return self.p1.y == self.p2.y
 
     def vertical(self):
+        assert not self.is_diag
         return self.p1.x == self.p2.x
 
     def contains(self, p: Point2D):
+        assert not self.is_diag
         return Or(And(self.horizontal(), self.p1.y == p.y,  self.p1.x <= p.x, p.x <= self.p2.x),
                   And(self.vertical(), self.p1.x == p.x, self.p1.y <= p.y, p.y <= self.p2.y))
 
@@ -288,6 +292,7 @@ def non_intersecting_seg_belt_diag_seg(belt: SegmentedBelt, dseg: Segment):
     """ all segments of a belt must not intersect a given ordered diagonal segment """
     assert isinstance(belt, SegmentedBelt)
     assert isinstance(dseg, Segment)
+    assert dseg.is_diag
 
     i = Const("i", IntSort())
     return ForAll([i], Implies(And(0 <= i, i < belt.num_segs),
@@ -307,7 +312,7 @@ class Rectangle:
         self.size_y = size_y
 
     def to_diag_seg(self)->Segment:
-        return Segment(self.pos, self.pos + (self.size_x-1, self.size_y-1))
+        return Segment(self.pos, self.pos + (self.size_x-1, self.size_y-1), is_diag=True)
 
     def non_intersecting(self, other: 'Rectangle'):
         assert isinstance(other, Rectangle)
