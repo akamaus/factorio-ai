@@ -7,6 +7,7 @@ from primitives import SOL, neighs, Abs, IntVal, \
     Rectangle, \
     Dir, dir_to_disp, Inserter
 
+
 class TestPrimitives(unittest.TestCase):
     def setUp(self) -> None:
         SOL.fresh_solver()
@@ -115,7 +116,7 @@ class TestPrimitives(unittest.TestCase):
         SOL.add(non_intersecting_segs(s1, s2))
         m = SOL.model()
         self.assertIsNotNone(m)
-        
+
     def test_intersecting_rectangles(self):
         r1 = Rectangle(3,3, x=0,y=0)
         r2 = Rectangle(3,3, x=2, y=2)

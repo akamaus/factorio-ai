@@ -184,8 +184,8 @@ def no_intersections(belt1: Belt, belt2: Belt):
     assert isinstance(belt2, Belt)
 
     i,j = Consts("i j", IntSort())
-    SOL.add(ForAll([i,j], Implies(And(0 <= i, i < belt1.belt_len, 0 <=j, j < belt2.belt_len),
-                                  Not(belt1[i] == belt2[j]))))
+    return ForAll([i,j], Implies(And(0 <= i, i < belt1.belt_len, 0 <=j, j < belt2.belt_len),
+                                 Not(belt1[i] == belt2[j])))
 
 
 class Segment:
@@ -196,12 +196,15 @@ class Segment:
         self.p2 = p2
 
 
-def horizontal(s: Segment):
-    return s.p1.y == s.p2.y
+    def horizontal(self):
+        return self.p1.y == self.p2.y
 
+    def vertical(self):
+        return self.p1.x == self.p2.x
 
-def vertical(s: Segment):
-    return s.p1.x == s.p2.x
+    def contains(self, p: Point2D):
+        return Or(And(self.horizontal(), self.p1.y == p.y,  self.p1.x <= p.x, p.x <= self.p2.x),
+                  And(self.vertical(), self.p1.x == p.x, self.p1.y <= p.y, p.y <= self.p2.y))
 
 
 class SegmentedBelt:
@@ -214,8 +217,7 @@ class SegmentedBelt:
 
         i,j = Consts("i j", IntSort())
         SOL.add(ForAll([i], Implies(And(0 <= i, i < self.num_segs),
-                                    Or(horizontal(self.segment(i)),
-                                       vertical(self.segment(i))))))
+                                    Or(self.segment(i).horizontal(), self.segment(i).vertical()))))
 
         self.__class__._IDX += 1
 
@@ -257,8 +259,8 @@ def non_intersecting_seg_belts(belt1: SegmentedBelt , belt2: SegmentedBelt):
     assert isinstance(belt2, SegmentedBelt)
 
     i,j = Consts("i j", IntSort())
-    SOL.add(ForAll([i,j], Implies(And(0 <= i, i < belt1.num_segs, 0 <=j, j < belt2.num_segs),
-                                  non_intersecting_segs(belt1.segment(i), belt2.segment(j)))))
+    return ForAll([i,j], Implies(And(0 <= i, i < belt1.num_segs, 0 <=j, j < belt2.num_segs),
+                                 non_intersecting_segs(belt1.segment(i), belt2.segment(j))))
 
 
 # Buildings
@@ -270,7 +272,7 @@ class Rectangle:
         self.size_x = size_x
         self.size_y = size_y
 
-    def to_diag_seg(self):
+    def to_diag_seg(self)->Segment:
         return Segment(self.pos, self.pos + (self.size_x-1, self.size_y-1))
 
     def non_intersecting(self, other: 'Rectangle'):
