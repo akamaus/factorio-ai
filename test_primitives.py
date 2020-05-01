@@ -3,7 +3,7 @@ import z3
 
 from primitives import SOL, neighs, Abs, IntVal, \
     Point2D, Belt, \
-    SegmentedBelt, Segment, non_intersecting_segs, \
+    SegmentedBelt, Segment, non_intersecting_segs, non_intersecting_seg_belt_diag_seg, \
     Rectangle, \
     Dir, dir_to_disp, Inserter
 
@@ -79,7 +79,6 @@ class TestPrimitives(unittest.TestCase):
         s = sbelt.segment(0)
         p1 = s.p1
         p2 = s.p2
-        print(p1.eval_as_tuple(), p2.eval_as_tuple())
 
         self.assertEqual(p1.eval_as_tuple(), (10,10))
         self.assertTrue(p2.eval_as_tuple() in [(15,10), (10,15)])
@@ -116,6 +115,31 @@ class TestPrimitives(unittest.TestCase):
         SOL.add(non_intersecting_segs(s1, s2))
         m = SOL.model()
         self.assertIsNotNone(m)
+
+    def test_intersecting_segbelt_and_dseg(self):
+        sb = SegmentedBelt()
+        SOL.add(sb.corner(0) == Point2D(0, 0))
+        SOL.add(sb.corner(1) == Point2D(10, 0))
+        SOL.add(sb.sink() == Point2D(20, 0))
+        SOL.add(sb.num_segs >= 2)
+        ds = Segment(Point2D(), Point2D())
+        SOL.add(ds.p1 == Point2D(12, 0))
+        SOL.add(ds.p2 == Point2D(15, 3))
+        SOL.add(non_intersecting_seg_belt_diag_seg(sb, ds))
+        d = None
+        for d in SOL.shrinker_loop(sb.num_segs):
+            pass
+        self.assertEqual(4, d)
+
+    def test_contains(self):
+        sb = SegmentedBelt()
+        SOL.add(sb.num_segs >= 2)
+        SOL.add(sb.segment(0).contains(Point2D(5,2)))
+        SOL.add(sb.segment(1).contains(Point2D(10, 5)))
+        SOL.add(sb.segment(0).horizontal())
+        SOL.model()
+        c1 = SOL.eval(sb.corner(1))
+        self.assertEqual(c1, Point2D(10,2))
 
     def test_intersecting_rectangles(self):
         r1 = Rectangle(3,3, x=0,y=0)

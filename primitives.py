@@ -15,8 +15,11 @@ class SolverWrapper:
     def add(self, *args):
         self._sol.add(*args)
 
-    def eval(self, *args):
-        res = self._sol.model().eval(*args)
+    def eval(self, arg):
+        if isinstance(arg, Point2D):
+            return arg.eval()
+
+        res = self._sol.model().eval(arg)
         if isinstance(res, z3.IntNumRef):
             res = res.as_long()
         elif isinstance(res, z3.DatatypeRef):
@@ -84,7 +87,22 @@ class Point2D:
         elif isinstance(other, tuple):
             assert len(other) == 2
             x,y = other
-        return And(self.x == x, self.y == y)
+        else:
+            raise ValueError('strange type for', other)
+
+        resx = self.x == x
+        resy = self.y == y
+
+        if resx is True and resy is True:
+            return True
+        elif resx is False or resy is False:
+            return False
+        elif resx is True:
+            return resy
+        elif resy is True:
+            return resx
+        else:
+            return And(resx, resy)
 
     def __add__(self, disp: tuple):
         assert isinstance(disp, tuple)
@@ -221,8 +239,11 @@ class SegmentedBelt:
 
         self.__class__._IDX += 1
 
+    def corner(self, i) -> Point2D:
+        return Point2D(self.corners_x(i), self.corners_y(i))
+
     def segment(self, i) -> Segment:
-        return Segment(Point2D(self.corners_x(i), self.corners_y(i)), Point2D(self.corners_x(i+1), self.corners_y(i+1)))
+        return Segment(self.corner(i) , self.corner(i+1))
 
     def source(self):
         return Point2D(self.corners_x(0), self.corners_y(0))
@@ -261,6 +282,19 @@ def non_intersecting_seg_belts(belt1: SegmentedBelt , belt2: SegmentedBelt):
     i,j = Consts("i j", IntSort())
     return ForAll([i,j], Implies(And(0 <= i, i < belt1.num_segs, 0 <=j, j < belt2.num_segs),
                                  non_intersecting_segs(belt1.segment(i), belt2.segment(j))))
+
+
+def non_intersecting_seg_belt_diag_seg(belt: SegmentedBelt, dseg: Segment):
+    """ all segments of a belt must not intersect a given ordered diagonal segment """
+    assert isinstance(belt, SegmentedBelt)
+    assert isinstance(dseg, Segment)
+
+    i = Const("i", IntSort())
+    return ForAll([i], Implies(And(0 <= i, i < belt.num_segs),
+                                   Or(Max(belt.segment(i).p1.x, belt.segment(i).p2.x) < dseg.p1.x,
+                                      Min(belt.segment(i).p1.x, belt.segment(i).p2.x) > dseg.p2.x,
+                                      Max(belt.segment(i).p1.y, belt.segment(i).p2.y) < dseg.p1.y,
+                                      Min(belt.segment(i).p1.y, belt.segment(i).p2.y) > dseg.p2.y)))
 
 
 # Buildings
