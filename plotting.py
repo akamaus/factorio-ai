@@ -16,10 +16,23 @@ def plot_inserter(ins: P.Inserter, color='y'):
               color=color)
 
 
-def plot_rectangle(f: P.Rectangle, color='r'):
+def plot_rectangle(f: P.Rectangle, gap=0.2, color='r', opacity=None):
     p = f.pos.eval()
-    r = patches.Rectangle((p.x - 0.5 + 0.2, p.y - 0.5 + 0.2), f.size_x - 0.4, f.size_y - 0.4, color=color)
+    r = patches.Rectangle((p.x - 0.5 + gap, p.y - 0.5 + gap), f.size_x - 2*gap, f.size_y - 2*gap, color=color, alpha=opacity)
     plt.gca().add_patch(r)
+
+
+def plot_segmented_belt(belt: P.SegmentedBelt, color='gray'):
+    GAP=0.1
+    corners = belt.eval_corners()
+    for c1, c2 in zip(corners, corners[1:]):
+        x1 = min(c1[0], c2[0])
+        x2 = max(c1[0], c2[0])
+        y1 = min(c1[1], c2[1])
+        y2 = max(c1[1], c2[1])
+
+        r = patches.Rectangle((x1 - 0.5 + GAP, y1 - 0.5 + GAP), x2 - x1 + 1 - 2*GAP, y2 - y1 + 1 - 2*GAP, color=color)
+        plt.gca().add_patch(r)
 
 
 def plot_grid(corner1, corner2, padding=2):
@@ -70,9 +83,26 @@ def plot_factory(f: Factory, title=None, size=None, show=False):
     for m in f.buildings:
         plot_rectangle(m, color=m.color)
 
+    for sb in f.segmented_belts:
+        plot_segmented_belt(sb, color=sb.color)
+
+    for a in f.areas:
+        plot_rectangle(a, color=a.color, opacity=a.opacity, gap=0)
+
+    def all_areas():
+        for b in f.buildings:
+            yield b.to_diag_seg().eval()
+
+        for sb in f.segmented_belts:
+            yield sb.eval_area()
+
+        for a in f.areas:
+            yield a.to_diag_seg().eval()
+
+    # Calculating occupied area, setting limites and drawing grid
     encompassing = f.buildings[0].to_diag_seg().eval()
-    for r in f.buildings:
-        encompassing = P.Segment.merge(encompassing, r.to_diag_seg().eval())
+    for area in all_areas():
+        encompassing = P.Segment.merge(encompassing, area)
 
     plot_grid(encompassing.p1.eval(), encompassing.p2.eval())
 

@@ -1,8 +1,10 @@
+from time import time
 import typing as T
 
 import z3 as Z
 
 import primitives as P
+
 
 class Factory:
     """ Factory object for creating and managing all stuff on the map """
@@ -10,10 +12,15 @@ class Factory:
         self.buildings: T.List[P.Rectangle] = []
         self.inserters: T.List[P.Inserter] = []
         self.segmented_belts: T.List[P.SegmentedBelt] = []
+
+        self.areas: T.List[P.Rectangle] = []
+
         self.finalized = False
+        self.elapsed_time: T.Optional[float] = None
 
         P.SOL.fresh_solver()
 
+    # Constructing
     def new_machine(self, color:str):
         m = P.AssemblyMachine()
         m.color = color
@@ -26,15 +33,45 @@ class Factory:
         self.inserters.append(ins)
         return ins
 
-    def connect_with_inserter(self, obj1, obj2) -> P.Inserter:
-        if isinstance(obj1, P.Rectangle) and isinstance(obj2, P.Rectangle):
-            ins = self.new_inserter()
-            P.SOL.add(P.connection(obj1, ins, obj2))
-            return ins
-        else:
-            raise('Unknown type pairs', type(obj1), type(obj2))
+    def new_segmented_belt(self, color: str='gray'):
+        b = P.SegmentedBelt()
+        b.color = color
+        self.segmented_belts.append(b)
+        return b
 
-    def add_non_intersecting_all(self):
+    def new_area(self, p1:tuple, p2:tuple, color: str, opacity=0.5):
+        r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p2[0])
+        r.color = color
+        r.opacity = opacity
+        self.areas.append(r)
+        return r
+
+    # Connecting
+    def connect_with_inserter(self, obj1, obj2) -> P.Inserter:
+        assert isinstance(obj1, (P.Rectangle, P.SegmentedBelt)), f"Strange type of obj1: {type(obj1)}"
+        assert isinstance(obj2, (P.Rectangle, P.SegmentedBelt)), f"Strange type of obj2: {type(obj2)}"
+
+        ins = self.new_inserter()
+        P.SOL.add(obj1.contains(ins.source()))
+        P.SOL.add(obj2.contains(ins.sink()))
+        return ins
+
+    def add(self, constraint):
+        """ Add arbitrary constraint """
+        P.SOL.add(constraint)
+
+    # Finalization and solving
+    def finalize_and_model(self):
+        """ Adds final constraints and solves for model """
+        assert not self.finalized
+        self.finalized = True
+        self._add_non_intersecting_all()
+        t0 = time()
+        m = P.SOL.model()
+        self.elapsed_time = time() - t0
+        return m
+
+    def _add_non_intersecting_all(self):
         # forbid intra-class intersections
         P.SOL.add(P.non_intersecting_rectangles(self.buildings))
 
@@ -63,9 +100,3 @@ class Factory:
         for e1 in col1:
             for e2 in col2:
                 yield e1,e2
-
-    def finalize_and_model(self):
-        assert not self.finalized
-        self.finalized = True
-        self.add_non_intersecting_all()
-        return P.SOL.model()

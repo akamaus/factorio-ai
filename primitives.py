@@ -280,6 +280,10 @@ class SegmentedBelt:
     def contains(self, p: Point2D):
         return Not(self.not_contains(p))
 
+    def fix_ends(self, source, sink):
+        SOL.add(self.source() == source)
+        SOL.add(self.sink() == sink)
+
     def eval_corners(self)->T.List[T.Tuple[int, int]]:
         points = []
         nc = SOL.eval(self.num_segs) + 1
@@ -289,10 +293,14 @@ class SegmentedBelt:
             points.append(t)
         return points
 
-    # convenience
-    def fix_ends(self, source, sink):
-        SOL.add(self.source() == source)
-        SOL.add(self.sink() == sink)
+    def eval_area(self) -> Segment:
+        """ Returns Diagonal segment bounding belt's area """
+        corners = self.eval_corners()
+        x1 = min(map(lambda c: c[0], corners))
+        x2 = max(map(lambda c: c[0], corners))
+        y1 = min(map(lambda c: c[1], corners))
+        y2 = max(map(lambda c: c[1], corners))
+        return Segment(Point2D(x1,y1), Point2D(x2,y2), is_diag=True)
 
 
 def non_intersecting_segs(s1: Segment, s2: Segment):
