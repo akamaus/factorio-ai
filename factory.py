@@ -40,7 +40,7 @@ class Factory:
         return b
 
     def new_area(self, p1:tuple, p2:tuple, color: str, opacity=0.5):
-        r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p2[0])
+        r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p1[1])
         r.color = color
         r.opacity = opacity
         self.areas.append(r)
