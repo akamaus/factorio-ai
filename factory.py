@@ -10,6 +10,7 @@ class Factory:
         self.buildings: T.List[P.Rectangle] = []
         self.inserters: T.List[P.Inserter] = []
         self.segmented_belts: T.List[P.SegmentedBelt] = []
+        self.finalized = False
 
         P.SOL.fresh_solver()
 
@@ -64,5 +65,7 @@ class Factory:
                 yield e1,e2
 
     def finalize_and_model(self):
+        assert not self.finalized
+        self.finalized = True
         self.add_non_intersecting_all()
         return P.SOL.model()

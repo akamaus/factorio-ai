@@ -16,7 +16,11 @@ class SolverWrapper:
         self._sol.add(*args)
 
     def eval(self, arg):
-        if isinstance(arg, Point2D):
+        """ Smart evaluator, if base type is passed returns as is, if z3 sort - evaluates, if aggregate object - invokes .eval method """
+        if isinstance(arg, int):
+            return arg
+
+        if isinstance(arg, (Point2D, Segment)):
             return arg.eval()
 
         res = self._sol.model().eval(arg)
@@ -214,6 +218,8 @@ class Segment:
         self.p2 = p2
         self.is_diag = is_diag
 
+    def __repr__(self):
+        return(f'Segment({repr(self.p1)}, {repr(self.p2)})')
 
     def horizontal(self):
         assert not self.is_diag
@@ -229,6 +235,17 @@ class Segment:
         return Or(And(self.horizontal(), self.p1.y == p.y,  self.p1.x <= p.x, p.x <= self.p2.x),
                   And(self.vertical(), self.p1.x == p.x, self.p1.y <= p.y, p.y <= self.p2.y))
 
+    def eval(self):
+        p1 = self.p1.eval()
+        p2 = self.p2.eval()
+        return Segment(p1,p2, self.is_diag)
+
+    @classmethod
+    def merge(self, seg1, seg2):
+        assert isinstance(seg1, Segment)
+        assert isinstance(seg2, Segment)
+        return Segment(Point2D(min(seg1.p1.x, seg2.p1.x), min(seg1.p1.y, seg2.p1.y)),
+                       Point2D(max(seg1.p2.x, seg2.p2.x), max(seg1.p2.y, seg2.p2.y)), is_diag=True)
 
 class SegmentedBelt:
     _IDX = 0
