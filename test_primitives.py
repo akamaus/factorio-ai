@@ -150,8 +150,6 @@ class TestPrimitives(unittest.TestCase):
             pass
         self.assertEqual(2, d)
 
-
-
     def test_intersecting_rectangles(self):
         r1 = Rectangle(3,3, x=0,y=0)
         r2 = Rectangle(3,3, x=2, y=2)
@@ -196,3 +194,32 @@ class TestPrimitives(unittest.TestCase):
         self.assertEqual((1, 0), in1.pos.eval_as_tuple())
         self.assertTrue(in1.dir.eval().eq(Dir.r))
         self.assertTrue(in2.dir.eval().eq(Dir.r))
+
+    def test_unit_inserter_connection(self):
+        in1 = Inserter(unit_len_only=True)
+        in2 = Inserter(unit_len_only=True)
+        disp = IntVal()
+
+        SOL.add(in1.source() == (0,0))
+        SOL.add(in1.sink() == in2.source())
+        x2 = in2.sink().x
+        SOL.add(disp.v == -z3.If(x2 > 0, x2, -x2))
+
+        for res in SOL.shrinker_loop(disp.v):
+            pass
+        self.assertEqual(-4, res)
+
+    def test_long_inserter_connection(self):
+        in1 = Inserter(unit_len_only=False)
+        in2 = Inserter(unit_len_only=False)
+        disp = IntVal()
+
+        SOL.add(in1.source() == (0, 0))
+        SOL.add(in1.sink() == in2.source())
+        x2 = in2.sink().x
+        SOL.add(disp.v == -z3.If(x2 > 0, x2, -x2))
+
+        for res in SOL.shrinker_loop(disp.v):
+            pass
+        print('arm', in1.arm_len.eval())
+        self.assertEqual(-8, res)

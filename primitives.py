@@ -67,9 +67,12 @@ SOL: SolverWrapper = SolverWrapper()
 
 class IntVal:
     _IDX = 0
-    def __init__(self, label=''):
-        self.v = Const(f'intval_{label}{self._IDX}', IntSort())
-        self.__class__._IDX += 1
+    def __init__(self, label='', value=None):
+        if value is None:
+            self.v = Const(f'intval_{label}{self._IDX}', IntSort())
+            self.__class__._IDX += 1
+        else:
+            self.v = value
 
     def eval(self):
         return SOL.eval(self.v)
@@ -401,38 +404,41 @@ class DirVal:
         return SOL.eval(self.v)
 
 
-def dir_to_disp(x: T.Union[DirVal, z3.DatatypeRef]) -> tuple:
+def dir_to_disp(x: T.Union[DirVal, z3.DatatypeRef], length:T.Union[int, z3.Int] = 1) -> tuple:
     if isinstance(x, DirVal):
         x = x.v
 
     assert isinstance(x, z3.DatatypeRef)
     if x.eq(Dir.u):
-        res = (0,1)
+        res = (0,length)
     elif x.eq(Dir.d):
-        res = (0, -1)
+        res = (0, -length)
     elif x.eq(Dir.r):
-        res = (1, 0)
+        res = (length, 0)
     elif x.eq(Dir.l):
-        res = (-1, 0)
+        res = (-length, 0)
     else:
         If = z3.If
-        res_x = If(Dir.is_r(x), 1, If(Dir.is_l(x), -1, 0))
-        res_y = If(Dir.is_u(x), 1, If(Dir.is_d(x), -1, 0))
+        res_x = If(Dir.is_r(x), length, If(Dir.is_l(x), -length, 0))
+        res_y = If(Dir.is_u(x), length, If(Dir.is_d(x), -length, 0))
         res = (res_x, res_y)
     return res
 
 
 class Inserter:
-    def __init__(self):
+    def __init__(self, unit_len_only=True):
         self.pos = Point2D()
         self.dir = DirVal()
+        self.arm_len = IntVal(value=1 if unit_len_only else None)
+        if not unit_len_only:
+            SOL.add(And(1 <= self.arm_len.v, self.arm_len.v <= 2))
 
     def source(self) -> Point2D:
-        disp = dir_to_disp(self.dir)
+        disp = dir_to_disp(self.dir, length=self.arm_len.v)
         return self.pos - disp
 
     def sink(self) -> Point2D:
-        disp = dir_to_disp(self.dir)
+        disp = dir_to_disp(self.dir, length=self.arm_len.v)
         return self.pos + disp
 
 
