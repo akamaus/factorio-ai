@@ -122,6 +122,8 @@ class Point2D:
     def eval(self):
         x = SOL.eval(self.x)
         y = SOL.eval(self.y)
+        assert isinstance(x, int)
+        assert isinstance(y, int)
         return Point2D(x,y)
 
     def eval_as_tuple(self):
@@ -366,6 +368,14 @@ class Rectangle:
         s = self.to_diag_seg()
         return And(s.p1.x <= p.x, p.x <= s.p2.x,
                    s.p1.y <= p.y, p.y <= s.p2.y)
+
+    def inside(self, bigger: 'Rectangle'):
+        """ Predicate, this rectangle lies inside other, a bigger one """
+        assert isinstance(bigger, Rectangle)
+        s = self.to_diag_seg()
+        b = bigger.to_diag_seg()
+        return And(b.p1.x <= s.p1.x, s.p2.x <= b.p2.x,
+                   b.p1.y <= s.p1.y, s.p2.y <= b.p2.y)
 
 
 def non_intersecting_rectangles(*rects: T.List[Rectangle]):

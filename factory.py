@@ -39,8 +39,15 @@ class Factory:
         self.segmented_belts.append(b)
         return b
 
-    def new_area(self, p1:tuple, p2:tuple, color: str, opacity=0.5):
-        r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p1[1])
+    def new_area(self, p1:T.Optional[tuple], p2:T.Optional[tuple], color: str, opacity=0.5):
+        if p1 and p2:
+            r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p1[1])
+        elif p1 is None and p2 is None:
+            p_size = P.Point2D()
+            r = P.Rectangle(size_x=p_size.x, size_y=p_size.y)
+        else:
+            raise ValueError('area must be either fully specified or fully symbolic')
+
         r.color = color
         r.opacity = opacity
         self.areas.append(r)

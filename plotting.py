@@ -18,7 +18,9 @@ def plot_inserter(ins: P.Inserter, color='y'):
 
 def plot_rectangle(f: P.Rectangle, gap=0.2, color='r', opacity=None):
     p = f.pos.eval()
-    r = patches.Rectangle((p.x - 0.5 + gap, p.y - 0.5 + gap), f.size_x - 2*gap, f.size_y - 2*gap, color=color, alpha=opacity)
+    sx = P.SOL.eval(f.size_x)
+    sy = P.SOL.eval(f.size_y)
+    r = patches.Rectangle((p.x - 0.5 + gap, p.y - 0.5 + gap), sx - 2*gap, sy - 2*gap, color=color, alpha=opacity)
     plt.gca().add_patch(r)
 
 
