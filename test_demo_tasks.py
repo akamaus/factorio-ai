@@ -71,3 +71,51 @@ class TestDemoTasks(unittest.TestCase):
 
         self.assertGreater(len(sizes), 0)
         self.assertEqual(9, sizes[-1])  # number got from experiments with visualization
+
+    def test_factory_minification(self):
+        from factory import Factory
+
+        MAX_SEGS = 1
+        N = 2
+        f = Factory()
+        prods1 = [f.new_machine('b') for _ in range(N)]
+        prods2 = [f.new_machine('g') for _ in range(N)]
+        prods3 = [f.new_machine('r') for _ in range(N)]
+        sbelt12 = f.new_segmented_belt()
+        sbelt23 = f.new_segmented_belt()
+
+        whole_area = f.new_area(None, None, color='gray', opacity=0.2)
+        metric = IntVal()
+
+        f.add(metric.v == whole_area.size_x + whole_area.size_y)
+
+        prod1_area = f.new_area(None, None, color='blue', opacity=0.2)
+        prod2_area = f.new_area(None, None, color='green', opacity=0.2)
+        prod3_area = f.new_area(None, None, color='red', opacity=0.2)
+
+        for a1, a2 in f._forall_commutative_pairs([prod1_area, prod2_area, prod3_area]):
+            f.add(a1.non_intersecting(a2))
+
+        f.add(sbelt12.num_segs <= MAX_SEGS)
+        f.add(sbelt23.num_segs <= MAX_SEGS)
+
+        for b in f.buildings:
+            f.add(b.inside(whole_area))
+
+        for p1 in prods1:
+            f.connect_with_inserter(p1, sbelt12)
+            f.add(p1.inside(prod1_area))
+
+        for p2 in prods2:
+            f.connect_with_inserter(sbelt12, p2)
+            f.connect_with_inserter(p2, sbelt23)
+            f.add(p2.inside(prod2_area))
+
+        for p3 in prods3:
+            f.connect_with_inserter(sbelt23, p3)
+            f.add(p3.inside(prod3_area))
+
+        f.finalize()
+        m = SOL.binary_shrinking(metric, 0, None)
+
+        self.assertEqual(18, m)

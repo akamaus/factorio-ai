@@ -68,11 +68,14 @@ class Factory:
         P.SOL.add(constraint)
 
     # Finalization and solving
+    def finalize(self):
+        assert not self.finalized
+        self._add_non_intersecting_all()
+        self.finalized = True
+
     def finalize_and_model(self):
         """ Adds final constraints and solves for model """
-        assert not self.finalized
-        self.finalized = True
-        self._add_non_intersecting_all()
+        self.finalize()
         t0 = time()
         m = P.SOL.model()
         self.elapsed_time = time() - t0

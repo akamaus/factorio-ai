@@ -61,6 +61,53 @@ class SolverWrapper:
             chk = self._sol.check()
             assert chk.r == 1
 
+    def binary_shrinking(self, scalar, lower=0, upper=None):
+        if isinstance(scalar, IntVal):
+            scalar = scalar.v
+
+        self._sol.push()
+
+        best_val = None
+
+        while upper is None or upper - lower >= 1:
+            if upper is not None:
+                border = (lower + upper) // 2
+            else:
+                border = None
+            print('LBU', lower, border, upper)
+
+            self._sol.add(lower <= scalar)
+
+            if border:
+                self._sol.add(scalar <= border)
+
+            res = self._sol.check()
+            print(res.r)
+            if res.r == 1:
+                scalar_val = self.eval(scalar)
+                print('V=', scalar_val)
+                upper = scalar_val
+                if best_val is None or best_val > scalar_val:
+                    best_val = scalar_val
+            elif border is None:
+                return None  # No solution at all
+            else:
+                lower = border + 1
+
+            self._sol.pop()
+            self._sol.push()
+
+        # Have to repeat check to restore model so it can be accessed by client code
+        self._sol.pop()
+
+        if res.r != 1:
+            assert best_val is not None
+            self._sol.add(scalar == best_val)
+            chk = self._sol.check()
+            assert chk.r == 1
+
+        return best_val
+
 
 SOL: SolverWrapper = SolverWrapper()
 
