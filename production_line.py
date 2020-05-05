@@ -40,13 +40,36 @@ class ProductionLine(SubFactory):
             P.SOL.add(b.segment(0).horizontal())
             P.SOL.add(z3.Or(z3.And(b.source().x == area_ds.p1.x, b.sink().x == area_ds.p2.x),
                             z3.And(b.source().x == area_ds.p2.x, b.sink().x == area_ds.p1.x)))
+            P.SOL.add(z3.And(area_ds.p1.y <= b.segment(0).p1.y, b.segment(0).p1.y <= area_ds.p2.y))
 
         if auto_output:
             ds_machine = self.model_machine.to_diag_seg()
             self.add(z3.Or(self.output_belt.segment(0).p1.y == ds_machine.p1.y - 1,
                            self.output_belt.segment(0).p1.y == ds_machine.p2.y + 1))
+            self.output_inserter = None
         else:
-            self.connect_with_inserter(self.model_machine, self.output_belt)
+            self.output_inserter = self.connect_with_inserter(self.model_machine, self.output_belt)
+
+    def postprocess(self):
+        """ Create missing assemblers and inserters (they form a regular pattern) """
+        from copy import copy
+
+        assert self.finalized
+
+        for i in range(1, self.num_machines):
+            mpos = self.model_machine.pos.eval()
+            m = P.AssemblyMachine(size=self.machine_size, x=mpos.x + i * self.machine_size, y=mpos.y)
+            m.color='gray'
+            self.buildings.append(m)
+
+            for ins in self.input_inserters + [self.output_inserter]:
+                if ins is None:  # output may be missing
+                    continue
+
+                ins2 = copy(ins)
+                ipos = ins.pos.eval()
+                ins2.pos = P.Point2D(ipos.x + i * self.machine_size, ipos.y)
+                self.inserters.append(ins2)
 
     def input(self, k: int) -> P.Point2D:
         assert k < self.num_inputs

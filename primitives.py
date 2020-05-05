@@ -432,7 +432,7 @@ class Rectangle:
 def non_intersecting_rectangles(*rects: T.List[Rectangle]):
     if len(rects) == 1 and isinstance(rects[0], list):
         rects = rects[0]
-    assert len(rects) >= 2
+
     cases = []
     for i in range(len(rects)):
         assert isinstance(rects[i], Rectangle)
@@ -442,8 +442,8 @@ def non_intersecting_rectangles(*rects: T.List[Rectangle]):
 
 
 class AssemblyMachine(Rectangle):
-    def __init__(self, x=None, y=None):
-        super().__init__(3, x, y)
+    def __init__(self, size, x=None, y=None):
+        super().__init__(x=x, y=y, size=3)
 
 
 Dir = z3.Datatype('Dir')

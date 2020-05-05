@@ -19,7 +19,7 @@ class SubFactory:
 
     # Constructing
     def new_machine(self, color: str, size=3):
-        m = P.AssemblyMachine(size)
+        m = P.AssemblyMachine(size=size)
         m.color = color
         self.buildings.append(m)
         return m
@@ -74,6 +74,7 @@ class SubFactory:
 
     # Finalization
     def finalize(self):
+        """ Prepare for solving """
         assert not self.finalized
         self._add_non_intersecting_all()
 
@@ -81,6 +82,10 @@ class SubFactory:
             self.add(b.inside(self.area))
 
         self.finalized = True
+
+    def postprocess(self):
+        """ Postprocess after solution filling missing details for visualize """
+        pass
 
     def _add_non_intersecting_all(self):
         # forbid intra-class intersections

@@ -70,14 +70,15 @@ def plot_grid(corner1, corner2, padding=2):
 
 
 def plot_subfactory(f: SubFactory):
-    assert isinstance(f, Factory)
+    assert isinstance(f, SubFactory)
     assert f.finalized
 
     for ins in f.inserters:
         plot_inserter(ins, color='y')
 
     for m in f.buildings:
-        plot_rectangle(m, color=m.color)
+        if isinstance(m, P.AssemblyMachine):
+            plot_rectangle(m, color=m.color)
 
     for sb in f.segmented_belts:
         plot_segmented_belt(sb, color=sb.color)
@@ -85,7 +86,7 @@ def plot_subfactory(f: SubFactory):
     for a in f.areas:
         plot_rectangle(a, color=a.color, opacity=a.opacity, gap=0)
 
-    plot_rectangle(f.area, color='gray', opacity=0.2, gap=0)
+    plot_rectangle(f.area, color=getattr(f.area, 'color', 'gray'), opacity=0.2, gap=0)
 
 
 def plot_factory(f: Factory, title=None, size=None, show=False):
@@ -96,9 +97,10 @@ def plot_factory(f: Factory, title=None, size=None, show=False):
     if title:
         plt.title(title)
 
-    plot_subfactory(f)
     for pl in f.production_lines:
-        plot_factory(pl)
+        plot_subfactory(pl)
+
+    plot_subfactory(f)
 
     # Calculating occupied area, setting limites and drawing grid
     encompassing = f.buildings[0].to_diag_seg().eval()

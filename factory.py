@@ -26,10 +26,10 @@ class Factory(SubFactory):
         return pl
 
     def finalize(self):
-        super().finalize()
+        for pl in self.production_lines:
+            pl.finalize()
 
-        for b in self.buildings:
-            self.add(b.inside(self.area))
+        super().finalize()
 
     def finalize_and_model(self, minimize_metric=None):
         """ Adds final constraints and solves for model """
@@ -41,5 +41,10 @@ class Factory(SubFactory):
             metric = P.SOL.binary_shrinking(minimize_metric, 0, None)
         m = P.SOL.model()
         self.elapsed_time = time() - t0
+
+        if m:
+            self.postprocess()
+            for pl in self.production_lines:
+                pl.postprocess()
 
         return m, metric
