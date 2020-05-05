@@ -18,8 +18,7 @@ def plot_inserter(ins: P.Inserter, color='y'):
 
 def plot_rectangle(f: P.Rectangle, gap=0.2, color='r', opacity=None):
     p = f.pos.eval()
-    sx = P.SOL.eval(f.size_x)
-    sy = P.SOL.eval(f.size_y)
+    sx,sy = f.size.eval_as_tuple()
     r = patches.Rectangle((p.x - 0.5 + gap, p.y - 0.5 + gap), sx - 2*gap, sy - 2*gap, color=color, alpha=opacity)
     plt.gca().add_patch(r)
 
@@ -90,6 +89,8 @@ def plot_factory(f: Factory, title=None, size=None, show=False):
 
     for a in f.areas:
         plot_rectangle(a, color=a.color, opacity=a.opacity, gap=0)
+
+    plot_rectangle(f.area, color='gray', opacity=0.2, gap=0)
 
     def all_areas():
         for b in f.buildings:

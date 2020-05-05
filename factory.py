@@ -6,9 +6,10 @@ import z3 as Z
 import primitives as P
 
 
-class Factory:
-    """ Factory object for creating and managing all stuff on the map """
-    def __init__(self):
+class SubFactory:
+    def __init__(self, area: T.Optional = None):
+        self.area = P.Rectangle(size=None) if area is None else area
+        # These are elements managed by this subfactory
         self.buildings: T.List[P.Rectangle] = []
         self.inserters: T.List[P.Inserter] = []
         self.segmented_belts: T.List[P.SegmentedBelt] = []
@@ -16,13 +17,10 @@ class Factory:
         self.areas: T.List[P.Rectangle] = []
 
         self.finalized = False
-        self.elapsed_time: T.Optional[float] = None
-
-        P.SOL.fresh_solver()
 
     # Constructing
-    def new_machine(self, color:str):
-        m = P.AssemblyMachine()
+    def new_machine(self, color: str, size=3):
+        m = P.Rectangle(size)
         m.color = color
         self.buildings.append(m)
         return m
@@ -33,13 +31,13 @@ class Factory:
         self.inserters.append(ins)
         return ins
 
-    def new_segmented_belt(self, color: str='gray'):
+    def new_segmented_belt(self, color: str = 'gray'):
         b = P.SegmentedBelt()
         b.color = color
         self.segmented_belts.append(b)
         return b
 
-    def new_area(self, p1:T.Optional[tuple], p2:T.Optional[tuple], color: str, opacity=0.5):
+    def new_area(self, p1: T.Optional[tuple], p2: T.Optional[tuple], color: str, opacity=0.5):
         if p1 and p2:
             r = P.Rectangle(size=P.Point2D(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1), x=p1[0], y=p1[1])
         elif p1 is None and p2 is None:
@@ -67,19 +65,11 @@ class Factory:
         """ Add arbitrary constraint """
         P.SOL.add(constraint)
 
-    # Finalization and solving
+    # Finalization
     def finalize(self):
         assert not self.finalized
         self._add_non_intersecting_all()
         self.finalized = True
-
-    def finalize_and_model(self):
-        """ Adds final constraints and solves for model """
-        self.finalize()
-        t0 = time()
-        m = P.SOL.model()
-        self.elapsed_time = time() - t0
-        return m
 
     def _add_non_intersecting_all(self):
         # forbid intra-class intersections
@@ -101,12 +91,41 @@ class Factory:
         for ins, sb in self._forall_pairs(self.inserters, self.segmented_belts):
             P.SOL.add(sb.not_contains(ins.pos))
 
-    def _forall_commutative_pairs(self, collection: list):
+    @staticmethod
+    def _forall_commutative_pairs(collection: list):
         for i in range(len(collection)):
             for j in range(i + 1, len(collection)):
                 yield collection[i], collection[j]
 
-    def _forall_pairs(self, col1: list, col2: list):
+    @staticmethod
+    def _forall_pairs(col1: list, col2: list):
         for e1 in col1:
             for e2 in col2:
-                yield e1,e2
+                yield e1, e2
+
+
+class Factory(SubFactory):
+    """ Factory object for creating and managing all stuff on the map """
+    def __init__(self):
+        super().__init__()
+        self.elapsed_time: T.Optional[float] = None
+        P.SOL.fresh_solver()
+
+    def finalize(self):
+        super().finalize()
+
+        for b in self.buildings:
+            self.add(b.inside(self.area))
+
+    def finalize_and_model(self, minimize_metric=None):
+        """ Adds final constraints and solves for model """
+        self.finalize()
+
+        t0 = time()
+        metric = None
+        if minimize_metric is not None:
+            metric = P.SOL.binary_shrinking(minimize_metric, 0, None)
+        m = P.SOL.model()
+        self.elapsed_time = time() - t0
+
+        return m, metric

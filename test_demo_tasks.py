@@ -84,10 +84,9 @@ class TestDemoTasks(unittest.TestCase):
         sbelt12 = f.new_segmented_belt()
         sbelt23 = f.new_segmented_belt()
 
-        whole_area = f.new_area(None, None, color='gray', opacity=0.2)
         metric = IntVal()
 
-        f.add(metric.v == whole_area.size.x + whole_area.size.y)
+        f.add(metric.v == f.area.size.x + f.area.size.y)
 
         prod1_area = f.new_area(None, None, color='blue', opacity=0.2)
         prod2_area = f.new_area(None, None, color='green', opacity=0.2)
@@ -98,9 +97,6 @@ class TestDemoTasks(unittest.TestCase):
 
         f.add(sbelt12.num_segs <= MAX_SEGS)
         f.add(sbelt23.num_segs <= MAX_SEGS)
-
-        for b in f.buildings:
-            f.add(b.inside(whole_area))
 
         for p1 in prods1:
             f.connect_with_inserter(p1, sbelt12)
@@ -115,7 +111,6 @@ class TestDemoTasks(unittest.TestCase):
             f.connect_with_inserter(sbelt23, p3)
             f.add(p3.inside(prod3_area))
 
-        f.finalize()
-        m = SOL.binary_shrinking(metric, 0, None)
-
-        self.assertEqual(18, m)
+        m, metric = f.finalize_and_model(metric)
+        self.assertIsNotNone(m)
+        self.assertEqual(18, metric)
