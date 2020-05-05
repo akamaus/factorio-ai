@@ -46,5 +46,5 @@ class Factory(SubFactory):
             self.postprocess()
             for pl in self.production_lines:
                 pl.postprocess()
+            return m, metric
 
-        return m, metric

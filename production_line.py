@@ -20,7 +20,7 @@ class ProductionLine(SubFactory):
         self.num_inputs = num_inputs
 
         # conservative estimations (2 for inserters)
-        area = P.Rectangle(size=P.Point2D(x=num_machines * machine_size, y=machine_size + num_inputs + 1 + 2))
+        area = P.Rectangle(size=P.Point2D(x=num_machines * machine_size, y=machine_size + num_inputs + 1 + (2 if num_inputs > 0 else 0)))
         area.color = color
         area.opacity = 0.2
         super().__init__(area=area)

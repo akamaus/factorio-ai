@@ -114,3 +114,21 @@ class TestDemoTasks(unittest.TestCase):
         m, metric = f.finalize_and_model(metric)
         self.assertIsNotNone(m)
         self.assertEqual(18, metric)
+
+    def test_production_line_stacking(self):
+        from factory import Factory
+
+        S1 = 15
+        S2 = 10
+        S3 = S2
+        f = Factory()
+        p1 = f.new_production_line(num_machines=S1, machine_size=2, num_inputs=0, auto_output=True, color='b')
+        p2 = f.new_production_line(num_machines=S2, machine_size=3, num_inputs=1, color='g')
+        p3 = f.new_production_line(num_machines=S3, machine_size=3, num_inputs=1, color='r')
+
+        f.connect_with_inserter(p1.output(), p2.input(0))
+        f.connect_with_inserter(p2.output(), p3.input(0))
+
+        metric = f.area.size.x + f.area.size.y
+        model, best_metric = f.finalize_and_model(minimize_metric=metric)
+        self.assertEqual(49, best_metric)
