@@ -7,7 +7,7 @@ from subfactory import SubFactory
 class ProductionLine(SubFactory):
     """ AssemblyMachines or Drills built along straight line together with belts and inserters """
     
-    def __init__(self, num_machines: int, machine_size: int, num_inputs: int, auto_output=False, color='gray'):
+    def __init__(self, num_machines: int, machine_size: int, num_inputs: int, auto_output=False, short_inserters=False, color='gray'):
         """ num_machines - number of machines in a row 
             machine_size - size of a single machine(in cells)
             num_inputs - number of input lines (common for all machines as they presumably share a single program)
@@ -28,7 +28,7 @@ class ProductionLine(SubFactory):
         self.model_machine = self.new_machine(size=machine_size, color='gray')
 
         self.input_belts = [self.new_segmented_belt() for _ in range(num_inputs)]
-        self.input_inserters = [self.connect_with_inserter(self.input_belts[i], self.model_machine) for i in range(num_inputs)]
+        self.input_inserters = [self.connect_with_inserter(self.input_belts[i], self.model_machine, unit_len_only=short_inserters) for i in range(num_inputs)]
         self.output_belt = self.new_segmented_belt()
 
         # tying machine to left side

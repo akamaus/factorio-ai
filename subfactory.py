@@ -24,8 +24,8 @@ class SubFactory:
         self.buildings.append(m)
         return m
 
-    def new_inserter(self, color: str = 'y'):
-        ins = P.Inserter()
+    def new_inserter(self, unit_len_only=True, color: str = 'y'):
+        ins = P.Inserter(unit_len_only=unit_len_only)
         ins.color = color
         self.inserters.append(ins)
         return ins
@@ -50,11 +50,11 @@ class SubFactory:
         return r
 
     # Connecting
-    def connect_with_inserter(self, obj1, obj2) -> P.Inserter:
+    def connect_with_inserter(self, obj1, obj2, unit_len_only=True) -> P.Inserter:
         assert isinstance(obj1, (P.Point2D, P.Rectangle, P.SegmentedBelt)), f"Strange type of obj1: {type(obj1)}"
         assert isinstance(obj2, (P.Point2D, P.Rectangle, P.SegmentedBelt)), f"Strange type of obj2: {type(obj2)}"
 
-        ins = self.new_inserter()
+        ins = self.new_inserter(unit_len_only=unit_len_only)
         if isinstance(obj1, P.Point2D):
             P.SOL.add(obj1 == ins.source())
         else:

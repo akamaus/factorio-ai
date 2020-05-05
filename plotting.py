@@ -7,14 +7,16 @@ from factory import Factory
 from subfactory import SubFactory
 
 
-def plot_inserter(ins: P.Inserter, color='y'):
+def plot_inserter(ins: P.Inserter):
     p = ins.pos.eval()
     tgt = ins.sink().eval()
     d = ins.dir.eval()
     disp = P.dir_to_disp(d)
+    len = ins.arm_len.eval()
+    assert 1 <= len <= 2
     plt.arrow((p.x + tgt.x) / 2 - disp[0] / 4, (p.y + tgt.y) / 2 - disp[1] / 4, disp[0] / 50, disp[1] / 50,
               width=0.1, length_includes_head=True, head_length=0.5,
-              color=color)
+              color='y' if len == 1 else 'r')
 
 
 def plot_rectangle(f: P.Rectangle, gap=0.2, color='r', opacity=None):
@@ -25,7 +27,7 @@ def plot_rectangle(f: P.Rectangle, gap=0.2, color='r', opacity=None):
 
 
 def plot_segmented_belt(belt: P.SegmentedBelt, color='gray'):
-    GAP=0.1
+    GAP=0.2
     corners = belt.eval_corners()
     for c1, c2 in zip(corners, corners[1:]):
         x1 = min(c1[0], c2[0])
@@ -74,7 +76,7 @@ def plot_subfactory(f: SubFactory):
     assert f.finalized
 
     for ins in f.inserters:
-        plot_inserter(ins, color='y')
+        plot_inserter(ins)
 
     for m in f.buildings:
         if isinstance(m, P.AssemblyMachine):
