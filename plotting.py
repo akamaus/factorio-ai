@@ -4,6 +4,7 @@ import numpy as np
 
 import primitives as P
 from factory import Factory
+from subfactory import SubFactory
 
 
 def plot_inserter(ins: P.Inserter, color='y'):
@@ -68,15 +69,9 @@ def plot_grid(corner1, corner2, padding=2):
         labelleft=False)
 
 
-def plot_factory(f: Factory, title=None, size=None, show=False):
+def plot_subfactory(f: SubFactory):
     assert isinstance(f, Factory)
     assert f.finalized
-
-    if size:
-        plt.figure(figsize=size)
-
-    if title:
-        plt.title(title)
 
     for ins in f.inserters:
         plot_inserter(ins, color='y')
@@ -92,6 +87,22 @@ def plot_factory(f: Factory, title=None, size=None, show=False):
 
     plot_rectangle(f.area, color='gray', opacity=0.2, gap=0)
 
+
+def plot_factory(f: Factory, title=None, size=None, show=False):
+
+    if size:
+        plt.figure(figsize=size)
+
+    if title:
+        plt.title(title)
+
+    plot_subfactory(f)
+    for pl in f.production_lines:
+        plot_factory(pl)
+
+    # Calculating occupied area, setting limites and drawing grid
+    encompassing = f.buildings[0].to_diag_seg().eval()
+
     def all_areas():
         for b in f.buildings:
             yield b.to_diag_seg().eval()
@@ -102,8 +113,6 @@ def plot_factory(f: Factory, title=None, size=None, show=False):
         for a in f.areas:
             yield a.to_diag_seg().eval()
 
-    # Calculating occupied area, setting limites and drawing grid
-    encompassing = f.buildings[0].to_diag_seg().eval()
     for area in all_areas():
         encompassing = P.Segment.merge(encompassing, area)
 
