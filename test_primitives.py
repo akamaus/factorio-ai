@@ -131,10 +131,32 @@ class TestPrimitives(unittest.TestCase):
             pass
         self.assertEqual(4, d)
 
+    def test_seg_contains_cases(self):
+        SOL.fresh_solver()
+        sb = Segment(p1=Point2D(0,0), p2=Point2D(10,0))
+        SOL.add(sb.contains(Point2D(5,0)))
+        self.assertIsNotNone(SOL.model())
+
+        SOL.fresh_solver()
+        sb = Segment(p1=Point2D(10, 0), p2=Point2D(0, 0))
+        SOL.add(sb.contains(Point2D(5, 0)))
+        self.assertIsNotNone(SOL.model())
+
+        SOL.fresh_solver()
+        sb = Segment(p1=Point2D(0, 0), p2=Point2D(0, 10))
+        SOL.add(sb.contains(Point2D(0, 5)))
+        self.assertIsNotNone(SOL.model())
+
+        SOL.fresh_solver()
+        sb = Segment(p1=Point2D(0, 10), p2=Point2D(0, 0))
+        SOL.add(sb.contains(Point2D(0, 5)))
+        self.assertIsNotNone(SOL.model())
+
+
     def test_seg_contains(self):
         sb = SegmentedBelt()
         SOL.add(sb.num_segs >= 2)
-        SOL.add(sb.segment(0).contains(Point2D(5,2)))
+        SOL.add(sb.segment(0).contains(Point2D(5, 2)))
         SOL.add(sb.segment(1).contains(Point2D(10, 5)))
         SOL.add(sb.segment(0).horizontal())
         SOL.model()

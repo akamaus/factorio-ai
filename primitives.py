@@ -284,13 +284,13 @@ class Segment:
     def contains(self, p: Point2D):
         assert isinstance(p, Point2D)
         assert not self.is_diag
-        return Or(And(self.horizontal(), self.p1.y == p.y,  self.p1.x <= p.x, p.x <= self.p2.x),
-                  And(self.vertical(), self.p1.x == p.x, self.p1.y <= p.y, p.y <= self.p2.y))
+        return Or(And(self.horizontal(), self.p1.y == p.y, Min(self.p1.x, self.p2.x) <= p.x, p.x <= Max(self.p1.x, self.p2.x)),
+                  And(self.vertical(), self.p1.x == p.x, Min(self.p1.y, self.p2.y) <= p.y, p.y <= Max(self.p1.y, self.p2.y)))
 
     def eval(self):
         p1 = self.p1.eval()
         p2 = self.p2.eval()
-        return Segment(p1,p2, self.is_diag)
+        return Segment(p1, p2, self.is_diag)
 
     @classmethod
     def merge(self, seg1, seg2):
@@ -443,7 +443,7 @@ def non_intersecting_rectangles(*rects: T.List[Rectangle]):
 
 class AssemblyMachine(Rectangle):
     def __init__(self, size, x=None, y=None):
-        super().__init__(x=x, y=y, size=3)
+        super().__init__(x=x, y=y, size=size)
 
 
 Dir = z3.Datatype('Dir')
