@@ -390,14 +390,18 @@ def non_intersecting_seg_belt_diag_seg(belt: SegmentedBelt, dseg: Segment):
 # Buildings
 class Rectangle:
     """ Generic class for all rectangular things, supports both floating and fixed locations """
-    def __init__(self, size_x, size_y,  x=None, y=None):
+    def __init__(self, size, x=None, y=None):
         self.pos = Point2D(x,y)
 
-        self.size_x = size_x
-        self.size_y = size_y
+        if isinstance(size, Point2D):
+            self.size = size
+        elif isinstance(size, int) or size is None:
+            self.size = Point2D(size, size)
+        else:
+            raise ValueError('Strange size', size, type(size))
 
     def to_diag_seg(self)->Segment:
-        return Segment(self.pos, self.pos + (self.size_x-1, self.size_y-1), is_diag=True)
+        return Segment(self.pos, self.pos + (self.size.x-1, self.size.y-1), is_diag=True)
 
     def non_intersecting(self, other: 'Rectangle'):
         assert isinstance(other, Rectangle)
@@ -437,10 +441,9 @@ def non_intersecting_rectangles(*rects: T.List[Rectangle]):
     return And(cases)
 
 
-
 class AssemblyMachine(Rectangle):
     def __init__(self, x=None, y=None):
-        super().__init__(3,3, x, y)
+        super().__init__(3, x, y)
 
 
 Dir = z3.Datatype('Dir')

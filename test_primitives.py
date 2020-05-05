@@ -151,15 +151,15 @@ class TestPrimitives(unittest.TestCase):
         self.assertEqual(2, d)
 
     def test_intersecting_rectangles(self):
-        r1 = Rectangle(3,3, x=0,y=0)
-        r2 = Rectangle(3,3, x=2, y=2)
+        r1 = Rectangle(size=3, x=0, y=0)
+        r2 = Rectangle(size=2, x=2, y=2)
         SOL.add(r1.intersecting(r2))
         m = SOL.model()
         self.assertIsNotNone(m)
 
     def test_non_intersecting_rectangles(self):
-        r1 = Rectangle(x=0,y=0, size_x=2, size_y=2)
-        r2 = Rectangle(x=2,y=0, size_x=3, size_y=3)
+        r1 = Rectangle(x=0,y=0, size=2)
+        r2 = Rectangle(x=2,y=0, size=3)
         SOL.add(r1.non_intersecting(r2))
         m = SOL.model()
         self.assertIsNotNone(m)

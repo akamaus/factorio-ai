@@ -41,10 +41,9 @@ class Factory:
 
     def new_area(self, p1:T.Optional[tuple], p2:T.Optional[tuple], color: str, opacity=0.5):
         if p1 and p2:
-            r = P.Rectangle(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1, p1[0], p1[1])
+            r = P.Rectangle(size=P.Point2D(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1), x=p1[0], y=p1[1])
         elif p1 is None and p2 is None:
-            p_size = P.Point2D()
-            r = P.Rectangle(size_x=p_size.x, size_y=p_size.y)
+            r = P.Rectangle(size=None)
         else:
             raise ValueError('area must be either fully specified or fully symbolic')
 
@@ -63,6 +62,7 @@ class Factory:
         P.SOL.add(obj2.contains(ins.sink()))
         return ins
 
+    @classmethod
     def add(self, constraint):
         """ Add arbitrary constraint """
         P.SOL.add(constraint)

@@ -87,7 +87,7 @@ class TestDemoTasks(unittest.TestCase):
         whole_area = f.new_area(None, None, color='gray', opacity=0.2)
         metric = IntVal()
 
-        f.add(metric.v == whole_area.size_x + whole_area.size_y)
+        f.add(metric.v == whole_area.size.x + whole_area.size.y)
 
         prod1_area = f.new_area(None, None, color='blue', opacity=0.2)
         prod2_area = f.new_area(None, None, color='green', opacity=0.2)
