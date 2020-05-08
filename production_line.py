@@ -26,6 +26,8 @@ class ProductionLine(SubFactory):
         super().__init__(area=area)
 
         self.model_machine = self.new_machine(size=machine_size, color='gray')
+        self.machine_area = self.new_area(self.model_machine.pos.as_tuple(),
+                                          (self.model_machine.pos + (num_machines*machine_size - 1, machine_size - 1)).as_tuple(), color='red', opacity=0.1)
 
         self.input_belts = [self.new_segmented_belt() for _ in range(num_inputs)]
         self.input_inserters = [self.connect_with_inserter(self.input_belts[i], self.model_machine, unit_len_only=short_inserters) for i in range(num_inputs)]

@@ -1,3 +1,4 @@
+from time import time
 import typing as T
 import z3
 from z3 import Const, IntSort, And, Or, Function, Consts, ForAll, Implies, Not
@@ -80,9 +81,10 @@ class SolverWrapper:
 
             if border:
                 self._sol.add(scalar <= border)
-
+            t0 = time()
             res = self._sol.check()
-            print(res.r)
+            dt = time() - t0
+            print(f'R={res.r}; T={dt:0.1f}')
             if res.r == 1:
                 scalar_val = self.eval(scalar)
                 print('V=', scalar_val)
@@ -165,6 +167,9 @@ class Point2D:
     def __sub__(self, disp: tuple):
         assert isinstance(disp, tuple)
         return Point2D(self.x - disp[0], self.y - disp[1])
+
+    def as_tuple(self):
+        return self.x, self.y
 
     def eval(self):
         x = SOL.eval(self.x)
@@ -301,11 +306,13 @@ class Segment:
 
 class SegmentedBelt:
     _IDX = 0
-    def __init__(self):
+    def __init__(self, max_segs=None):
         self.corners_x = Function(f'seg_belt{self._IDX}_x', IntSort(), IntSort())
         self.corners_y = Function(f'seg_belt{self._IDX}_y', IntSort(), IntSort())
         self.num_segs = Const(f'seg_belt{self._IDX}_num_segs', IntSort())
         SOL.add(self.num_segs > 0)
+        if max_segs:
+            SOL.add(self.num_segs <= max_segs)
 
         i,j = Consts("i j", IntSort())
         SOL.add(ForAll([i], Implies(And(0 <= i, i < self.num_segs),

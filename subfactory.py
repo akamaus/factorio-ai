@@ -30,8 +30,8 @@ class SubFactory:
         self.inserters.append(ins)
         return ins
 
-    def new_segmented_belt(self, color: str = 'gray'):
-        b = P.SegmentedBelt()
+    def new_segmented_belt(self, max_segs=None, color: str = 'gray'):
+        b = P.SegmentedBelt(max_segs=max_segs)
         b.color = color
         self.segmented_belts.append(b)
         return b
