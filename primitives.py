@@ -76,15 +76,15 @@ class SolverWrapper:
             else:
                 border = None
             print('LBU', lower, border, upper)
+            t0 = time()
 
             self._sol.add(lower <= scalar)
 
             if border:
                 self._sol.add(scalar <= border)
-            t0 = time()
             res = self._sol.check()
             dt = time() - t0
-            print(f'R={res.r}; T={dt:0.1f}')
+            print(f'R={res.r}; T={dt:0.3f}')
             if res.r == 1:
                 scalar_val = self.eval(scalar)
                 print('V=', scalar_val)
@@ -92,6 +92,7 @@ class SolverWrapper:
                 if best_val is None or best_val > scalar_val:
                     best_val = scalar_val
             elif border is None:
+                print('V=unsat')
                 return None  # No solution at all
             else:
                 lower = border + 1
@@ -449,7 +450,7 @@ def non_intersecting_rectangles(*rects: T.List[Rectangle]):
 
 
 class AssemblyMachine(Rectangle):
-    def __init__(self, size, x=None, y=None):
+    def __init__(self, size=3, x=None, y=None):
         super().__init__(x=x, y=y, size=size)
 
 
