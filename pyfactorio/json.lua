@@ -68,13 +68,13 @@
 -----------------------------------------------------------------------------
 -- Module declaration
 -----------------------------------------------------------------------------
-local json = {}
+
+json = {}
 
 do
    -----------------------------------------------------------------------------
    -- Imports and dependencies
    -----------------------------------------------------------------------------
-   local math, string, table = require'math', require'string', require'table'
    local math_floor, math_max, math_type = math.floor, math.max, math.type or function() end
    local string_char, string_sub, string_find, string_match, string_gsub, string_format
       = string.char, string.sub, string.find, string.match, string.gsub, string.format
@@ -243,6 +243,7 @@ do
          local rval = {}
          -- Consider arrays separately
          local bArray, maxCount = isArray(obj)
+         print('maxCount', maxCount)
          if bArray then
             for i = obj[0] ~= nil and 0 or 1, maxCount do
                table_insert(rval, json.encode(obj[i]))
@@ -638,6 +639,7 @@ do
       end
    end
 
+  
    --- Scans a JSON string skipping all whitespace from the current start position.
    -- Returns the position of the first non-whitespace character.
    -- @param   state      The state of JSON reader.
@@ -738,4 +740,4 @@ do
 
 end
 
-return json
+
