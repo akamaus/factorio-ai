@@ -16,6 +16,21 @@ class TestPrimitives(unittest.TestCase):
         return p1c[0] == p2c[0] and abs(p1c[1] - p2c[1]) == 1 or \
                p1c[1] == p2c[1] and abs(p1c[0] - p2c[0]) == 1
 
+    def test_neigh_segments(self):
+        seg = Segment(Point2D(0,0), Point2D(1,1))
+
+        ls = seg.left_neigh()
+        self.assertEqual(Point2D(-1, 0), ls.p1)
+        self.assertEqual(Point2D(-1, 1), ls.p2)
+
+        rs = seg.right_neigh()
+        self.assertEqual(Point2D(2, 0), rs.p1)
+        self.assertEqual(Point2D(2, 1), rs.p2)
+
+        bs = seg.bottom_neigh()
+        self.assertEqual(Point2D(0, 2), bs.p1)
+        self.assertEqual(Point2D(1, 2), bs.p2)
+
     def test_shrinker(self):
         p1 = Point2D()
         dst = IntVal()

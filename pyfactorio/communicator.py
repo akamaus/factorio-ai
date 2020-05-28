@@ -5,6 +5,7 @@ from primitives import Point2D
 
 
 class Communicator:
+    """ Object implementing basic factorio communication functionality """
     BUFFER_SIZE = 2 ** 20
 
     def __init__(self, host='127.0.0.1', port=1268):
@@ -38,6 +39,7 @@ import json
 
 
 class SmartCommunicator:
+    """ Smarter communicator supporting high-level requests """
     def __init__(self, comm=None):
         self.comm = Communicator() if comm is None else comm
 

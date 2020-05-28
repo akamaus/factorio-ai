@@ -169,8 +169,25 @@ class Point2D:
         assert isinstance(disp, tuple)
         return Point2D(self.x - disp[0], self.y - disp[1])
 
+    def right(self):
+        return Point2D(self.x + 1, self.y)
+
+    def left(self):
+        return Point2D(self.x - 1, self.y)
+
+    def top(self):
+        return Point2D(self.x, self.y - 1)
+
+    def bottom(self):
+        return Point2D(self.x, self.y + 1)
+
     def as_tuple(self):
         return self.x, self.y
+
+    def round(self):
+        assert isinstance(self.x, (int, float))
+        assert isinstance(self.y, (int, float))
+        return Point2D(round(self.x), round(self.y))
 
     def eval(self):
         x = SOL.eval(self.x)
@@ -297,6 +314,30 @@ class Segment:
         p1 = self.p1.eval()
         p2 = self.p2.eval()
         return Segment(p1, p2, self.is_diag)
+
+    # Building some related objects
+    def enumerate_points(self) -> T.Iterator[Point2D]:
+        """ If segment is fully realized then it's points can be enumerated """
+        p1, p2 = self.p1, self.p2
+        for x in range(p1.x, p2.x + 1):
+            for y in range(p1.y, p2.y + 1):
+                yield Point2D(x, y)
+
+    def left_neigh(self):
+        p = self.p1.left()
+        return Segment(p, Point2D(p.x, self.p2.y))
+
+    def right_neigh(self):
+        p = self.p2.right()
+        return Segment(Point2D(p.x, self.p1.y), p)
+
+    def top_neigh(self):
+        p = self.p1.top()
+        return Segment(p, Point2D(self.p2.x, p.y))
+
+    def bottom_neigh(self):
+        p = self.p2.bottom()
+        return Segment(Point2D(self.p1.x, p.y), p)
 
     @classmethod
     def merge(self, seg1, seg2):
