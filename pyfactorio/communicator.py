@@ -47,7 +47,7 @@ class SmartCommunicator:
         self.load_module('walk')
 
     def load_module(self, name):
-        txt = readfile(osp.join('scripts', name + '.lua'))
+        txt = readfile(osp.join(osp.dirname(__file__), 'scripts', name + '.lua'))
         res = self.comm.eval(txt)
         assert res == 'nil'
 
@@ -64,7 +64,7 @@ class SmartCommunicator:
         else:
             p2x, p2y = p2.x, p2.y
 
-        entities_str = self.comm.eval(f"return json.encode(find_entities({p1x}, {p1y}, {p2x}, {p2y}))")
+        entities_str = self.comm.eval(f"return game.table_to_json(find_entities({p1x}, {p1y}, {p2x}, {p2y}))")
 
         try:
             res = json.loads(entities_str)

@@ -11,6 +11,10 @@ function Queue:new()
   return o
 end
 
+function Queue:size()
+  return self.fresh - self.first
+end
+
 function Queue:peek()
   return self[self.first]
 end

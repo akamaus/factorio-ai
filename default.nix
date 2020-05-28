@@ -14,6 +14,7 @@ let
     jupyter
     matplotlib
     numpy
+    pytest
     tqdm
     z3
   ]));
