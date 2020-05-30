@@ -8,7 +8,7 @@ from factory_theory.primitives import SOL, neighs, Abs, IntVal, \
     Dir, dir_to_disp, Inserter
 
 
-class TestPrimitives(unittest.TestCase):
+class TestBase(unittest.TestCase):
     def setUp(self) -> None:
         SOL.fresh_solver()
 
@@ -16,6 +16,8 @@ class TestPrimitives(unittest.TestCase):
         return p1c[0] == p2c[0] and abs(p1c[1] - p2c[1]) == 1 or \
                p1c[1] == p2c[1] and abs(p1c[0] - p2c[0]) == 1
 
+
+class TestPrimitives(TestBase):
     def test_neigh_segments(self):
         seg = Segment(Point2D(0,0), Point2D(1,1))
 
@@ -31,6 +33,50 @@ class TestPrimitives(unittest.TestCase):
         self.assertEqual(Point2D(0, 2), bs.p1)
         self.assertEqual(Point2D(1, 2), bs.p2)
 
+    def test_neigh_points(self):
+        p1 = Point2D()
+        p2 = Point2D()
+        SOL.add(neighs(p1,p2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+        p1c = p1.eval_as_tuple()
+        p2c = p2.eval_as_tuple()
+        self.assertTrue(self.check_near(p1c, p2c))
+
+    def test_intersecting_rectangles(self):
+        r1 = Rectangle(size=3, x=0, y=0)
+        r2 = Rectangle(size=2, x=2, y=2)
+        SOL.add(r1.intersecting(r2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+    def test_non_intersecting_rectangles(self):
+        r1 = Rectangle(x=0,y=0, size=2)
+        r2 = Rectangle(x=2,y=0, size=3)
+        SOL.add(r1.non_intersecting(r2))
+        m = SOL.model()
+        self.assertIsNotNone(m)
+
+    def test_dir_to_disp(self):
+        disp = dir_to_disp(Dir.u)
+        self.assertEqual(0, disp[0])
+        self.assertEqual(1, disp[1])
+
+    def test_dir_to_disp_static(self):
+        disp = dir_to_disp(Dir.u)
+        self.assertEqual(0, disp[0])
+        self.assertEqual(1, disp[1])
+
+    def test_dir_to_disp_dynamic(self):
+        dr = z3.Const('dir', Dir)
+        SOL.add(dr == Dir.u)
+        disp = dir_to_disp(dr)
+        m = SOL.model()
+        self.assertEqual(0, SOL.eval(disp[0]))
+        self.assertEqual(1, SOL.eval(disp[1]))
+
+
+class TestSol(TestBase):
     def test_shrinker(self):
         p1 = Point2D()
         dst = IntVal()
@@ -43,16 +89,8 @@ class TestPrimitives(unittest.TestCase):
         self.assertEqual(dists[-1], 0)
         self.assertEqual(p1c, (2,3))
 
-    def test_neigh_points(self):
-        p1 = Point2D()
-        p2 = Point2D()
-        SOL.add(neighs(p1,p2))
-        m = SOL.model()
-        self.assertIsNotNone(m)
-        p1c = p1.eval_as_tuple()
-        p2c = p2.eval_as_tuple()
-        self.assertTrue(self.check_near(p1c, p2c))
 
+class TestBelts(TestBase):
     def test_belt(self):
         belt = Belt()
         belt.fix_ends(source=(1,1), sink=(5,5))
@@ -167,7 +205,6 @@ class TestPrimitives(unittest.TestCase):
         SOL.add(sb.contains(Point2D(0, 5)))
         self.assertIsNotNone(SOL.model())
 
-
     def test_seg_contains(self):
         sb = SegmentedBelt()
         SOL.add(sb.num_segs >= 2)
@@ -187,38 +224,8 @@ class TestPrimitives(unittest.TestCase):
             pass
         self.assertEqual(2, d)
 
-    def test_intersecting_rectangles(self):
-        r1 = Rectangle(size=3, x=0, y=0)
-        r2 = Rectangle(size=2, x=2, y=2)
-        SOL.add(r1.intersecting(r2))
-        m = SOL.model()
-        self.assertIsNotNone(m)
 
-    def test_non_intersecting_rectangles(self):
-        r1 = Rectangle(x=0,y=0, size=2)
-        r2 = Rectangle(x=2,y=0, size=3)
-        SOL.add(r1.non_intersecting(r2))
-        m = SOL.model()
-        self.assertIsNotNone(m)
-
-    def test_dir_to_disp(self):
-        disp = dir_to_disp(Dir.u)
-        self.assertEqual(0, disp[0])
-        self.assertEqual(1, disp[1])
-
-    def test_dir_to_disp_static(self):
-        disp = dir_to_disp(Dir.u)
-        self.assertEqual(0, disp[0])
-        self.assertEqual(1, disp[1])
-
-    def test_dir_to_disp_dynamic(self):
-        dr = z3.Const('dir', Dir)
-        SOL.add(dr == Dir.u)
-        disp = dir_to_disp(dr)
-        m = SOL.model()
-        self.assertEqual(0, SOL.eval(disp[0]))
-        self.assertEqual(1, SOL.eval(disp[1]))
-
+class TestInserters(TestBase):
     def test_inserter_chain(self):
         in1 = Inserter()
         in2 = Inserter()
