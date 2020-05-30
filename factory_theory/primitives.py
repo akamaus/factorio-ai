@@ -1,117 +1,10 @@
-from time import time
 import typing as T
 import z3
 from z3 import Const, IntSort, And, Or, Function, Consts, ForAll, Implies, Not
 
+from .base_types import BasePoint2D, BaseSegment
+from .solver_wrapper import SolverWrapper
 from utils import tail
-
-
-# General
-class SolverWrapper:
-    def __init__(self):
-        self._sol = None
-        self.fresh_solver()
-
-    def fresh_solver(self):
-        self._sol = z3.Solver()
-
-    def add(self, *args):
-        self._sol.add(*args)
-
-    def eval(self, arg):
-        """ Smart evaluator, if base type is passed returns as is, if z3 sort - evaluates, if aggregate object - invokes .eval method """
-        if isinstance(arg, int):
-            return arg
-
-        if isinstance(arg, (Point2D, Segment)):
-            return arg.eval()
-
-        res = self._sol.model().eval(arg)
-        if isinstance(res, z3.IntNumRef):
-            res = res.as_long()
-        elif isinstance(res, z3.DatatypeRef):
-            pass
-        else:
-            raise ValueError('unknown result', type(res), res)
-        return res
-
-    def model(self):
-        chk = self._sol.check()
-        if chk.r == 1:
-            return self._sol.model()
-
-    def shrinker_loop(self, scalar, init=None, restore=True):
-        if isinstance(scalar, IntVal):
-            scalar = scalar.v
-
-        self._sol.push()
-        if init:
-            self._sol.add(scalar <= init)
-        best_val = None
-        while self._sol.check().r == 1:
-            scalar_val = self.eval(scalar)
-            best_val = scalar_val
-            yield scalar_val
-            self._sol.pop()
-            self._sol.push()
-            self._sol.add(scalar < scalar_val)
-
-        # Have to repeat check to restore model so it can be accessed by client code
-        self._sol.pop()
-
-        if restore and best_val is not None:
-            self._sol.add(scalar == best_val)
-            chk = self._sol.check()
-            assert chk.r == 1
-
-    def binary_shrinking(self, scalar, lower=0, upper=None):
-        if isinstance(scalar, IntVal):
-            scalar = scalar.v
-
-        self._sol.push()
-
-        best_val = None
-
-        while upper is None or upper - lower >= 1:
-            if upper is not None:
-                border = (lower + upper) // 2
-            else:
-                border = None
-            print('LBU', lower, border, upper)
-            t0 = time()
-
-            self._sol.add(lower <= scalar)
-
-            if border:
-                self._sol.add(scalar <= border)
-            res = self._sol.check()
-            dt = time() - t0
-            print(f'R={res.r}; T={dt:0.3f}')
-            if res.r == 1:
-                scalar_val = self.eval(scalar)
-                print('V=', scalar_val)
-                upper = scalar_val
-                if best_val is None or best_val > scalar_val:
-                    best_val = scalar_val
-            elif border is None:
-                print('V=unsat')
-                return None  # No solution at all
-            else:
-                lower = border + 1
-
-            self._sol.pop()
-            self._sol.push()
-
-        # Have to repeat check to restore model so it can be accessed by client code
-        self._sol.pop()
-
-        if res.r != 1:
-            assert best_val is not None
-            self._sol.add(scalar == best_val)
-            chk = self._sol.check()
-            assert chk.r == 1
-
-        return best_val
 
 
 SOL: SolverWrapper = SolverWrapper()
@@ -121,7 +14,7 @@ class IntVal:
     _IDX = 0
     def __init__(self, label='', value=None):
         if value is None:
-            self.v = Const(f'intval_{label}{self._IDX}', IntSort())
+            self.v = z3.Const(f'intval_{label}{self._IDX}', z3.IntSort())
             self.__class__._IDX += 1
         else:
             self.v = value
@@ -130,22 +23,24 @@ class IntVal:
         return SOL.eval(self.v)
 
 
-class Point2D:
+class Point2D(BasePoint2D):
     _IDX = 0
+
     def __init__(self, x=None, y=None):
-        self.x = Const(f"p{self._IDX}_x", IntSort()) if x is None else x
-        self.y = Const(f"p{self._IDX}_y", IntSort()) if y is None else y
+        x = Const(f"p{self._IDX}_x", IntSort()) if x is None else x
+        y = Const(f"p{self._IDX}_y", IntSort()) if y is None else y
         self.__class__._IDX += 1
+        super().__init__(x, y)
 
     def __repr__(self):
         return f'Point2D({self.x},{self.y})'
 
     def __eq__(self, other):
-        if isinstance(other, Point2D):
-            x,y = other.x, other.y
+        if isinstance(other, BasePoint2D):
+            x, y = other.x, other.y
         elif isinstance(other, tuple):
             assert len(other) == 2
-            x,y = other
+            x, y = other
         else:
             raise ValueError('strange type for', other)
 
@@ -163,34 +58,6 @@ class Point2D:
         else:
             return And(resx, resy)
 
-    def __add__(self, disp: tuple):
-        assert isinstance(disp, tuple)
-        return Point2D(self.x + disp[0], self.y + disp[1])
-
-    def __sub__(self, disp: tuple):
-        assert isinstance(disp, tuple)
-        return Point2D(self.x - disp[0], self.y - disp[1])
-
-    def right(self):
-        return Point2D(self.x + 1, self.y)
-
-    def left(self):
-        return Point2D(self.x - 1, self.y)
-
-    def top(self):
-        return Point2D(self.x, self.y - 1)
-
-    def bottom(self):
-        return Point2D(self.x, self.y + 1)
-
-    def as_tuple(self):
-        return self.x, self.y
-
-    def round(self):
-        assert isinstance(self.x, (int, float))
-        assert isinstance(self.y, (int, float))
-        return Point2D(round(self.x), round(self.y))
-
     def eval(self):
         x = SOL.eval(self.x)
         y = SOL.eval(self.y)
@@ -204,15 +71,41 @@ class Point2D:
         return x,y
 
 
-def near_z(x, y):
+class Segment(BaseSegment):
+    def __repr__(self):
+        return(f'Segment({repr(self.p1)}, {repr(self.p2)})')
+
+    def contains(self, p: Point2D):
+        assert isinstance(p, Point2D)
+        assert not self.is_diag
+        return Or(And(self.horizontal(), self.p1.y == p.y, Min(self.p1.x, self.p2.x) <= p.x, p.x <= Max(self.p1.x, self.p2.x)),
+                  And(self.vertical(), self.p1.x == p.x, Min(self.p1.y, self.p2.y) <= p.y, p.y <= Max(self.p1.y, self.p2.y)))
+
+    def len(self):
+        return Abs(self.p1.x - self.p2.x) + Abs(self.p1.y - self.p2.y) + 1
+
+    def eval(self):
+        p1 = self.p1.eval()
+        p2 = self.p2.eval()
+        return Segment(p1, p2, self.is_diag)
+
+    @classmethod
+    def merge(self, seg1, seg2):
+        assert isinstance(seg1, Segment)
+        assert isinstance(seg2, Segment)
+        return Segment(Point2D(min(seg1.p1.x, seg2.p1.x), min(seg1.p1.y, seg2.p1.y)),
+                       Point2D(max(seg1.p2.x, seg2.p2.x), max(seg1.p2.y, seg2.p2.y)), is_diag=True)
+
+
+def _int_near(x, y):
     return Or(x == y+1, x == y-1)
 
 
-def neighs(p1: Point2D, p2:Point2D):
+def neighs(p1: Point2D, p2: Point2D):
     assert isinstance(p1, Point2D)
     assert isinstance(p2, Point2D)
-    return Or(And(p1.x == p2.x, near_z(p1.y, p2.y)),
-              And(p1.y == p2.y, near_z(p1.x, p2.x)))
+    return Or(And(p1.x == p2.x, _int_near(p1.y, p2.y)),
+              And(p1.y == p2.y, _int_near(p1.x, p2.x)))
 
 
 def Abs(x):
@@ -290,73 +183,9 @@ def no_intersections(belt1: Belt, belt2: Belt):
                                  Not(belt1[i] == belt2[j])))
 
 
-class Segment:
-    def __init__(self, p1:Point2D, p2:Point2D, is_diag:bool=False):
-        assert isinstance(p1, Point2D)
-        assert isinstance(p2, Point2D)
-        self.p1 = p1
-        self.p2 = p2
-        self.is_diag = is_diag
-
-    def __repr__(self):
-        return(f'Segment({repr(self.p1)}, {repr(self.p2)})')
-
-    def horizontal(self):
-        assert not self.is_diag
-        return self.p1.y == self.p2.y
-
-    def vertical(self):
-        assert not self.is_diag
-        return self.p1.x == self.p2.x
-
-    def contains(self, p: Point2D):
-        assert isinstance(p, Point2D)
-        assert not self.is_diag
-        return Or(And(self.horizontal(), self.p1.y == p.y, Min(self.p1.x, self.p2.x) <= p.x, p.x <= Max(self.p1.x, self.p2.x)),
-                  And(self.vertical(), self.p1.x == p.x, Min(self.p1.y, self.p2.y) <= p.y, p.y <= Max(self.p1.y, self.p2.y)))
-
-    def len(self):
-        return Abs(self.p1.x - self.p2.x) + Abs(self.p1.y - self.p2.y) + 1
-
-    def eval(self):
-        p1 = self.p1.eval()
-        p2 = self.p2.eval()
-        return Segment(p1, p2, self.is_diag)
-
-    # Building some related objects
-    def enumerate_points(self) -> T.Iterator[Point2D]:
-        """ If segment is fully realized then it's points can be enumerated """
-        p1, p2 = self.p1, self.p2
-        for x in range(p1.x, p2.x + 1):
-            for y in range(p1.y, p2.y + 1):
-                yield Point2D(x, y)
-
-    def left_neigh(self):
-        p = self.p1.left()
-        return Segment(p, Point2D(p.x, self.p2.y))
-
-    def right_neigh(self):
-        p = self.p2.right()
-        return Segment(Point2D(p.x, self.p1.y), p)
-
-    def top_neigh(self):
-        p = self.p1.top()
-        return Segment(p, Point2D(self.p2.x, p.y))
-
-    def bottom_neigh(self):
-        p = self.p2.bottom()
-        return Segment(Point2D(self.p1.x, p.y), p)
-
-    @classmethod
-    def merge(self, seg1, seg2):
-        assert isinstance(seg1, Segment)
-        assert isinstance(seg2, Segment)
-        return Segment(Point2D(min(seg1.p1.x, seg2.p1.x), min(seg1.p1.y, seg2.p1.y)),
-                       Point2D(max(seg1.p2.x, seg2.p2.x), max(seg1.p2.y, seg2.p2.y)), is_diag=True)
-
-
 class SegmentedBelt:
     _IDX = 0
+
     def __init__(self, max_segs=None):
         self.corners_x = Function(f'seg_belt{self._IDX}_x', IntSort(), IntSort())
         self.corners_y = Function(f'seg_belt{self._IDX}_y', IntSort(), IntSort())
