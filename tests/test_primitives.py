@@ -224,6 +224,26 @@ class TestBelts(TestBase):
             pass
         self.assertEqual(2, d)
 
+    def test_seg_belt_enumerate(self):
+        sb = SegmentedBelt()
+        SOL.add(sb.source() == (0,0))
+        SOL.add(sb.sink() == (5,5))
+        SOL.add(sb.num_segs < 5)
+        ln = sb.len(5)
+
+        for d in SOL.shrinker_loop(ln):
+            pass
+
+        self.assertEqual(11, d)
+
+        p0 = None
+        for p in sb.enumerate_points():
+            if p0:
+                dx = p.x - p0.x
+                dy = p.y - p0.y
+                self.assertTrue(dx == 0 and dy == 1 or dx == 1 and dy == 0)
+            p0 = p
+
 
 class TestInserters(TestBase):
     def test_inserter_chain(self):

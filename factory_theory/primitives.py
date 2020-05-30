@@ -3,6 +3,8 @@ import typing as T
 import z3
 from z3 import Const, IntSort, And, Or, Function, Consts, ForAll, Implies, Not
 
+from utils import tail
+
 
 # General
 class SolverWrapper:
@@ -214,7 +216,10 @@ def neighs(p1: Point2D, p2:Point2D):
 
 
 def Abs(x):
-    return z3.If(x >= 0, x, -x)
+    if isinstance(x, (int, float)):
+        return abs(x)
+    else:
+        return z3.If(x >= 0, x, -x)
 
 
 def Max(x,y):
@@ -310,6 +315,9 @@ class Segment:
         return Or(And(self.horizontal(), self.p1.y == p.y, Min(self.p1.x, self.p2.x) <= p.x, p.x <= Max(self.p1.x, self.p2.x)),
                   And(self.vertical(), self.p1.x == p.x, Min(self.p1.y, self.p2.y) <= p.y, p.y <= Max(self.p1.y, self.p2.y)))
 
+    def len(self):
+        return Abs(self.p1.x - self.p2.x) + Abs(self.p1.y - self.p2.y) + 1
+
     def eval(self):
         p1 = self.p1.eval()
         p2 = self.p2.eval()
@@ -345,6 +353,7 @@ class Segment:
         assert isinstance(seg2, Segment)
         return Segment(Point2D(min(seg1.p1.x, seg2.p1.x), min(seg1.p1.y, seg2.p1.y)),
                        Point2D(max(seg1.p2.x, seg2.p2.x), max(seg1.p2.y, seg2.p2.y)), is_diag=True)
+
 
 class SegmentedBelt:
     _IDX = 0
@@ -385,6 +394,10 @@ class SegmentedBelt:
         SOL.add(self.source() == source)
         SOL.add(self.sink() == sink)
 
+    def len(self, max_segs):
+        seg_lens = [ z3.If(k < self.num_segs, self.segment(k).len(), 0) for k in range(max_segs)]
+        return sum(seg_lens) - self.num_segs + 1
+
     def eval_corners(self)->T.List[T.Tuple[int, int]]:
         points = []
         nc = SOL.eval(self.num_segs) + 1
@@ -402,6 +415,19 @@ class SegmentedBelt:
         y1 = min(map(lambda c: c[1], corners))
         y2 = max(map(lambda c: c[1], corners))
         return Segment(Point2D(x1,y1), Point2D(x2,y2), is_diag=True)
+
+    def enumerate_points(self) -> T.Iterator[Point2D]:
+        """ Iterates points from source to sink one after another """
+        ns = SOL.eval(self.num_segs)
+
+        first = True
+        for si in range(ns):
+            seg = self.segment(si).eval()
+            if first:
+                yield from seg.enumerate_points()
+                first = False
+            else:
+                yield from tail(seg.enumerate_points())
 
 
 def non_intersecting_segs(s1: Segment, s2: Segment):
