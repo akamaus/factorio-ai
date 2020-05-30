@@ -1,7 +1,7 @@
 import z3
 
-import primitives as P
-from subfactory import SubFactory
+from factory_theory import primitives as P
+from factory_theory.subfactory import SubFactory
 
 
 class ProductionLine(SubFactory):

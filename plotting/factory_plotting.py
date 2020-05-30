@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
 
-import primitives as P
-from factory import Factory
-from subfactory import SubFactory
+from factory_theory import primitives as P
+from factory_theory.factory import Factory
+from factory_theory.subfactory import SubFactory
 
 
 def plot_inserter(ins: P.Inserter):

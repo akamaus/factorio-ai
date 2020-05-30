@@ -1,7 +1,7 @@
 from time import time
 import unittest
 
-from primitives import SOL, IntVal, \
+from factory_theory.primitives import SOL, IntVal, \
     Belt, no_intersections, \
     SegmentedBelt, non_intersecting_seg_belts
 
@@ -73,7 +73,7 @@ class TestDemoTasks(unittest.TestCase):
         self.assertEqual(9, sizes[-1])  # number got from experiments with visualization
 
     def test_factory_minification(self):
-        from factory import Factory
+        from factory_theory.factory import Factory
 
         MAX_SEGS = 1
         N = 2
@@ -116,7 +116,7 @@ class TestDemoTasks(unittest.TestCase):
         self.assertEqual(18, metric)
 
     def test_production_line_stacking(self):
-        from factory import Factory
+        from factory_theory.factory import Factory
 
         S1 = 15
         S2 = 10

@@ -1,9 +1,9 @@
 from time import time
 import typing as T
 
-import primitives as P
-from subfactory import SubFactory
-from production_line import ProductionLine
+from factory_theory import primitives as P
+from factory_theory.subfactory import SubFactory
+from factory_theory.production_line import ProductionLine
 
 
 class Factory(SubFactory):

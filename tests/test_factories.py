@@ -1,6 +1,6 @@
 import unittest
 
-from factory import Factory
+from factory_theory.factory import Factory
 
 
 class TestFactory(unittest.TestCase):

@@ -1,7 +1,7 @@
 import unittest
 import z3
 
-from primitives import SOL, neighs, Abs, IntVal, \
+from factory_theory.primitives import SOL, neighs, Abs, IntVal, \
     Point2D, Belt, \
     SegmentedBelt, Segment, non_intersecting_segs, non_intersecting_seg_belt_diag_seg, \
     Rectangle, \

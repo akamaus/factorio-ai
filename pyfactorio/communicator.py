@@ -1,7 +1,7 @@
 import os.path as osp
 import socket
 
-from primitives import Point2D
+from factory_theory.primitives import Point2D
 
 
 class Communicator:

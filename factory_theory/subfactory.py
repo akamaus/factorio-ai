@@ -2,7 +2,7 @@ import typing as T
 
 import z3 as Z
 
-import primitives as P
+from factory_theory import primitives as P
 
 
 class SubFactory:
@@ -38,7 +38,14 @@ class SubFactory:
 
     def new_area(self, p1: T.Optional[tuple], p2: T.Optional[tuple], color: str, opacity=0.5):
         if p1 and p2:
-            r = P.Rectangle(size=P.Point2D(p2[0] - p1[0] + 1, p2[1] - p1[1] + 1), x=p1[0], y=p1[1])
+            if isinstance(p1, tuple):
+                assert len(p1) == 2
+                p1 = P.Point2D(*p1)
+            if isinstance(p2, tuple):
+                assert len(p2) == 2
+                p2 = P.Point2D(*p2)
+
+            r = P.Rectangle(size=P.Point2D(p2.x - p1.x + 1, p2.y - p1.y + 1), x=p1.x, y=p1.y)
         elif p1 is None and p2 is None:
             r = P.Rectangle(size=None)
         else:

@@ -1,6 +1,6 @@
 import numpy as np
 
-from primitives import Point2D, Segment
+from factory_theory.primitives import Point2D, Segment
 
 
 def entity_block(entities, name):
