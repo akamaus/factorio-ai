@@ -39,6 +39,8 @@ class SolverWrapper:
             return self._sol.model()
 
     def shrinker_loop(self, scalar, init=None, restore=True):
+
+        print(SOL._sol.assertions())
         if isinstance(scalar, IntVal):
             scalar = scalar.v
 

@@ -18,20 +18,20 @@ class TestBase(unittest.TestCase):
 
 
 class TestPrimitives(TestBase):
-    def test_neigh_segments(self):
-        seg = Segment(Point2D(0,0), Point2D(1,1))
-
-        ls = seg.left_neigh()
-        self.assertEqual(Point2D(-1, 0), ls.p1)
-        self.assertEqual(Point2D(-1, 1), ls.p2)
-
-        rs = seg.right_neigh()
-        self.assertEqual(Point2D(2, 0), rs.p1)
-        self.assertEqual(Point2D(2, 1), rs.p2)
-
-        bs = seg.bottom_neigh()
-        self.assertEqual(Point2D(0, 2), bs.p1)
-        self.assertEqual(Point2D(1, 2), bs.p2)
+    # def test_neigh_segments(self):
+    #     seg = Segment(Point2D(0,0), Point2D(1,1))
+    #
+    #     ls = seg.left_neigh()
+    #     self.assertEqual(Point2D(-1, 0), ls.p1)
+    #     self.assertEqual(Point2D(-1, 1), ls.p2)
+    #
+    #     rs = seg.right_neigh()
+    #     self.assertEqual(Point2D(2, 0), rs.p1)
+    #     self.assertEqual(Point2D(2, 1), rs.p2)
+    #
+    #     bs = seg.bottom_neigh()
+    #     self.assertEqual(Point2D(0, 2), bs.p1)
+    #     self.assertEqual(Point2D(1, 2), bs.p2)
 
     def test_neigh_points(self):
         p1 = Point2D()
@@ -50,44 +50,46 @@ class TestPrimitives(TestBase):
         m = SOL.model()
         self.assertIsNotNone(m)
 
-    def test_non_intersecting_rectangles(self):
-        r1 = Rectangle(x=0,y=0, size=2)
-        r2 = Rectangle(x=2,y=0, size=3)
-        SOL.add(r1.non_intersecting(r2))
-        m = SOL.model()
-        self.assertIsNotNone(m)
+    # def test_non_intersecting_rectangles(self):
+    #     r1 = Rectangle(x=0,y=0, size=2)
+    #     r2 = Rectangle(x=2,y=0, size=3)
+    #     SOL.add(r1.non_intersecting(r2))
+    #     m = SOL.model()
+    #     self.assertIsNotNone(m)
 
-    def test_dir_to_disp(self):
-        disp = dir_to_disp(Dir.u)
-        self.assertEqual(0, disp[0])
-        self.assertEqual(1, disp[1])
-
-    def test_dir_to_disp_static(self):
-        disp = dir_to_disp(Dir.u)
-        self.assertEqual(0, disp[0])
-        self.assertEqual(1, disp[1])
-
-    def test_dir_to_disp_dynamic(self):
-        dr = z3.Const('dir', Dir)
-        SOL.add(dr == Dir.u)
-        disp = dir_to_disp(dr)
-        m = SOL.model()
-        self.assertEqual(0, SOL.eval(disp[0]))
-        self.assertEqual(1, SOL.eval(disp[1]))
+    # def test_dir_to_disp(self):
+    #     disp = dir_to_disp(Dir.u)
+    #     self.assertEqual(0, disp[0])
+    #     self.assertEqual(1, disp[1])
+    #
+    # def test_dir_to_disp_static(self):
+    #     disp = dir_to_disp(Dir.u)
+    #     self.assertEqual(0, disp[0])
+    #     self.assertEqual(1, disp[1])
+    #
+    # def test_dir_to_disp_dynamic(self):
+    #     dr = z3.Const('dir', Dir)
+    #     SOL.add(dr == Dir.u)
+    #     disp = dir_to_disp(dr)
+    #     m = SOL.model()
+    #     self.assertEqual(0, SOL.eval(disp[0]))
+    #     self.assertEqual(1, SOL.eval(disp[1]))
 
 
 class TestSol(TestBase):
-    def test_shrinker(self):
-        p1 = Point2D()
-        dst = IntVal()
-        SOL.add(dst.v == Abs(p1.x - 2) + Abs(p1.y - 3))
-        dists = []
-        for d in SOL.shrinker_loop(dst):
-            dists.append(d)
-
-        p1c = p1.eval_as_tuple()
-        self.assertEqual(dists[-1], 0)
-        self.assertEqual(p1c, (2,3))
+    pass
+    # def test_shrinker(self):
+    #     return
+    #     p1 = Point2D()
+    #     dst = IntVal()
+    #     SOL.add(dst.v == Abs(p1.x - 2) + Abs(p1.y - 3))
+    #     dists = []
+    #     for d in SOL.shrinker_loop(dst):
+    #         dists.append(d)
+    #
+    #     p1c = p1.eval_as_tuple()
+    #     self.assertEqual(dists[-1], 0)
+    #     self.assertEqual(p1c, (2,3))
 
 
 class TestBelts(TestBase):
